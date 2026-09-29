@@ -1,0 +1,19 @@
+--- a/lib/libalpm/util.c	2026-09-29 13:26:46.407250538 +0800
++++ b/lib/libalpm/util.c	2026-09-29 13:26:46.446307850 +0800
+@@ -43,6 +43,16 @@
+ #include <archive.h>
+ #include <archive_entry.h>
+ 
++/*
++ * LINE_MAX is specified by POSIX to come from <limits.h>, but Bionic's
++ * limits.h does not define it.  Without this guard the build dies with
++ * "use of undeclared identifier 'LINE_MAX'" on every NDK older than r30.
++ * 2048 matches glibc and only sizes a pipe read buffer here.
++ */
++#ifndef LINE_MAX
++#define LINE_MAX 2048
++#endif
++
+ #ifdef HAVE_LIBSSL
+ #include <openssl/evp.h>
+ #endif
