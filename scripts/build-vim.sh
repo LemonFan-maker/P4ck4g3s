@@ -23,8 +23,12 @@ mkdir -p "$STAGING_DIR/bin" "$STAGING_DIR/etc" "$STAGING_DIR/share"
 
 VMAJOR=$(sed -n 's/^#define[[:space:]]\+VIM_VERSION_MAJOR[[:space:]]\+\([0-9]\{1,\}\).*/\1/p' src/version.h | head -1)
 VMINOR=$(sed -n 's/^#define[[:space:]]\+VIM_VERSION_MINOR[[:space:]]\+\([0-9]\{1,\}\).*/\1/p' src/version.h | head -1)
-VPATCH=$(awk '/static int included_patches/,/^};/' src/version.c \
-    | sed -n 's/^[[:space:]]*\([0-9][0-9]*\),[[:space:]]*$/\1/p' | head -1)
+VPATCH=$(awk '
+    /static int included_patches/ { inlist = 1; next }
+    inlist && /^};/             { inlist = 0 }
+    inlist && match($0, /^[ \t]*[0-9]+,[ \t]*$/) {
+        v = $0; gsub(/[^0-9]/, "", v); print v; exit
+    }' src/version.c)
 if [[ -z "$VMAJOR" || -z "$VMINOR" || -z "$VPATCH" ]]; then
     log_error "无法解析vim版本(MAJOR=$VMAJOR MINOR=$VMINOR PATCH=$VPATCH),拒绝打包"
     exit 1
