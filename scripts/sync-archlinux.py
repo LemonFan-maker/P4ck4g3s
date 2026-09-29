@@ -51,7 +51,7 @@ COMPONENTS = [
          desc="0vl0ad3r基础文件系统层次结构与环境分流配置"),
     dict(pkg="ndk", kind="toolchain", source="pin", version="r30",
          arch=None, version_of=None, ref=None, url=None,
-         desc="Android NDK交叉工具链(构建输入,不作为软件包发布)"),
+         desc="Android NDK交叉工具链"),
 ]
 
 REPOS = {

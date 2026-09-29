@@ -17,4 +17,4 @@ wget,tool,arch,,,wget-1.25.0.tar.gz,https://ftp.gnu.org/gnu/wget/wget-1.25.0.tar
 aria2,tool,arch,https://github.com/aria2/aria2.git,release-1.37.0,,,,,aria2,1.37.0,"Download utility that supports HTTP(S), FTP, BitTorrent, and Metalink"
 ca-certificates,data,pin,,,cacert-2024-09-24.pem,https://curl.se/ca/cacert-2024-09-24.pem,,189d3cf6d103185fba06d76c1af915263c6d42225481a1759e853b33ac857540,ca-certificates,2024.09.24,Common CA certificates - default providers
 base-layout,data,pin,,,,,,,,1.0.0,0vl0ad3r基础文件系统层次结构与环境分流配置
-ndk,toolchain,pin,,,,,,,,r30,"Android NDK交叉工具链(构建输入,不作为软件包发布)"
+ndk,toolchain,pin,,,,,,,,r30,Android NDK交叉工具链
