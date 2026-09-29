@@ -3,12 +3,8 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
-NANO_REPO="https://git.savannah.gnu.org/git/nano.git"
-NANO_VER="latest"
-NANO_TAR="nano-8.3.tar.xz"
-NANO_URL="https://www.nano-editor.org/dist/v8/${NANO_TAR}"
-NANO_URL_FALLBACK="https://ftp.gnu.org/gnu/nano/${NANO_TAR}"
 SRC_DIR="$BUILD_DIR/nano"
 STAGING_DIR="$BUILD_DIR/staging_nano"
 
@@ -17,18 +13,8 @@ if [[ ! -f "$SYSROOT/lib64/libncursesw.so" && ! -f "$SYSROOT/lib/libncursesw.so"
     "$REPO_ROOT/bootstrap/build-ncurses.sh"
 fi
 
-log_info ">>> 开始从Git仓库浅克隆最新代码并构建nano(master)..."
-
-if ! git_clone_latest "$NANO_REPO" "$SRC_DIR" "master" 2>/dev/null; then
-    log_info "Git克隆受限,自动回退至官方发布镜像源..."
-    download_tarball "$NANO_URL" "$NANO_TAR" || download_tarball "$NANO_URL_FALLBACK" "$NANO_TAR"
-    rm -rf "$SRC_DIR"
-    mkdir -p "$SRC_DIR"
-    tar -xf "$DOWNLOADS_DIR/$NANO_TAR" -C "$BUILD_DIR"
-    if [[ -d "$BUILD_DIR/nano-8.3" ]]; then
-        mv "$BUILD_DIR/nano-8.3"/* "$SRC_DIR/" 2>/dev/null || true
-    fi
-fi
+log_info ">>> 开始构建nano(清单钉住$(manifest_require_version nano))..."
+fetch_source nano "$SRC_DIR"
 apply_patches "nano" "$SRC_DIR"
 
 cd "$SRC_DIR"
@@ -37,25 +23,23 @@ mkdir -p "$STAGING_DIR/bin" "$STAGING_DIR/etc" "$STAGING_DIR/share/nano"
 
 if [[ ! -f configure && -f autogen.sh ]]; then
     log_info "正在生成configure脚本(autogen.sh)..."
-    ./autogen.sh 2>/dev/null || autoreconf -fi 2>/dev/null || true
+    if ! ./autogen.sh; then
+        log_error "autogen.sh失败,改用autoreconf -fi..."
+        autoreconf -fi || {
+            log_error "autogen.sh与autoreconf -fi都失败,nano无法生成configure"
+            log_error "宿主需要autoconf / automake / libtool / gettext"
+            exit 1
+        }
+    fi
 fi
 
 if [[ ! -f configure ]]; then
-    log_info "Git源码树缺少预构建configure,自动加载官方发布镜像包..."
-    download_tarball "$NANO_URL" "$NANO_TAR" || download_tarball "$NANO_URL_FALLBACK" "$NANO_TAR"
-    rm -rf "$SRC_DIR"
-    mkdir -p "$SRC_DIR"
-    tar -xf "$DOWNLOADS_DIR/$NANO_TAR" --strip-components=1 -C "$SRC_DIR"
-    apply_patches "nano" "$SRC_DIR"
-    cd "$SRC_DIR"
-fi
-
-CURRENT_VER=$(sed -n "s/^PACKAGE_VERSION='\([^']*\)'.*/\1/p" configure 2>/dev/null | head -1 || true)
-if [[ -z "$CURRENT_VER" ]]; then
-    log_error "无法从configure解析nano的PACKAGE_VERSION,拒绝打包"
+    log_error "nano源码树缺少configure,拒绝构建"
+    log_error "清单钉住的官方发布tarball自带configure,缺失说明取到了错误产物"
     exit 1
 fi
-CURRENT_VER="$(git_pkgver "$SRC_DIR" "$CURRENT_VER")"
+
+CURRENT_VER="$(manifest_require_version nano)"
 
 export CFLAGS="-O2 -pipe -fPIC -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -I$SYSROOT/include -I$SYSROOT/include/ncursesw"
 export LDFLAGS="-L$SYSROOT/lib -L$SYSROOT/lib64 -lncursesw -Wl,-rpath,'\$ORIGIN/../lib64' -Wl,--enable-new-dtags"
@@ -109,7 +93,7 @@ EOF
     "nano" \
     "$CURRENT_VER" \
     "1" \
-    "轻量级全功能终端文本编辑器(GNU nano,带完整高亮与UTF-8支持)" \
+    "$(manifest_desc nano)" \
     "https://www.nano-editor.org/" \
     "GPL-3.0-or-later" \
     "base-layout"

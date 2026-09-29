@@ -2,24 +2,13 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-NCURSES_REPO="https://github.com/ThomasDickey/ncurses-snapshots.git"
-NCURSES_VER="6.5"
-NCURSES_TAR="ncurses-${NCURSES_VER}.tar.gz"
-NCURSES_URL="https://invisible-mirror.net/archives/ncurses/${NCURSES_TAR}"
+NCURSES_VER="$(manifest_require_version ncurses)"
 SRC_DIR="$BUILD_DIR/ncurses"
 
-log_info ">>> 开始从GitHub/GitLab浅克隆最新代码并构建ncurses(master)..."
-if ! git_clone_latest "$NCURSES_REPO" "$SRC_DIR" "master" 2>/dev/null; then
-    log_info "Git克隆受限,自动回退至官方发布镜像源..."
-    download_tarball "$NCURSES_URL" "$NCURSES_TAR"
-    rm -rf "$SRC_DIR"
-    mkdir -p "$SRC_DIR"
-    tar -xzf "$DOWNLOADS_DIR/$NCURSES_TAR" -C "$BUILD_DIR"
-    if [[ -d "$BUILD_DIR/ncurses-${NCURSES_VER}" ]]; then
-        mv "$BUILD_DIR/ncurses-${NCURSES_VER}"/* "$SRC_DIR/" 2>/dev/null || true
-    fi
-fi
+log_info ">>> 开始构建ncurses(清单钉住官方发布tarball ${NCURSES_VER})..."
+fetch_source ncurses "$SRC_DIR"
 apply_patches "ncurses" "$SRC_DIR"
 
 cd "$SRC_DIR"
@@ -66,10 +55,10 @@ if [[ -z "$BUILT_VER" ]]; then
     exit 1
 fi
 if [[ "$BUILT_VER" != "$NCURSES_VER" ]]; then
-    log_info "源码版本$BUILT_VER与下载版本$NCURSES_VER不同(走的是git master),pkgver取实际构建值$BUILT_VER"
+    log_error "ncurses版本与清单不符:源码为$BUILT_VER,清单为$NCURSES_VER"
+    log_error "请运行./scripts/sync-archlinux.py刷新清单,或确认tar地址是否已指向新版本"
+    exit 1
 fi
-NCURSES_VER="$BUILT_VER"
-NCURSES_VER="$(git_pkgver "$SRC_DIR" "$NCURSES_VER")"
 
 cd "$SYSROOT"
 mkdir -p lib64 include/ncurses include/ncursesw
@@ -124,7 +113,7 @@ fi
     "ncurses" \
     "$NCURSES_VER" \
     "1" \
-    "System V Release 4.0 curses终端显示核心库(包含wide-character及terminfo数据库)" \
+    "$(manifest_desc ncurses)" \
     "https://invisible-island.net/ncurses/" \
     "MIT" \
     "base-layout"

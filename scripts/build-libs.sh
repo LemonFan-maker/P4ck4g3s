@@ -3,31 +3,49 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
 LIB_SPECS=(
-    "zlib|libz.so*||通用压缩库(DEFLATE实现的Bionic aarch64原生版)"
-    "zstd|libzstd.so*||Zstandard快速无损压缩库(zstd CLI的底层实现,Bionic aarch64原生版)"
-    "xz|liblzma.so*||LZMA2压缩与解压库(Bionic aarch64原生版)"
-    "openssl|libssl.so* libcrypto.so*||OpenSSL 3密码学与TLS库(Bionic aarch64原生版)"
-    "libarchive|libarchive.so*||多格式归档读写库tar/zip/cpio(Bionic aarch64原生版)"
-    "libcurl|libcurl.so*||libcurl传输库HTTP/FTP/TLS(Bionic aarch64原生版)"
-    "libc++|libc++_shared.so|NDK|LLVM libc++共享运行时库(来自Android NDK sysroot)"
-    "libalpm|libalpm.so*||Arch Linux包管理器核心库libalpm(pacman的引擎)"
+    "zlib|libz.so*|"
+    "zstd|libzstd.so*|"
+    "xz|liblzma.so*|"
+    "openssl|libssl.so* libcrypto.so*|"
+    "libarchive|libarchive.so*|"
+    "libcurl|libcurl.so*|"
+    "libc++|libc++_shared.so|NDK"
+    "libalpm|libalpm.so*|"
 )
 
-detect_version() {
-    local name="$1"
-    case "$name" in
-        zlib) grep -oE 'ZLIB_TAG="v?[0-9.]+"' "$REPO_ROOT/bootstrap/build-zlib.sh" | grep -oE '[0-9.]+' ;;
-        zstd) grep -oE 'ZSTD_TAG="v?[0-9.]+"' "$REPO_ROOT/bootstrap/build-zstd.sh" | grep -oE '[0-9.]+' ;;
-        xz) grep -oE 'XZ_TAG="v?[0-9.]+"' "$REPO_ROOT/bootstrap/build-xz.sh" | grep -oE '[0-9.]+' ;;
-        libarchive) grep -oE 'ARCHIVE_TAG="v?[0-9.]+"' "$REPO_ROOT/bootstrap/build-archive.sh" | grep -oE '[0-9.]+' ;;
-        openssl) sed -n 's/.*OPENSSL_VERSION_STR *"\([0-9.]*\)".*/\1/p' "$SYSROOT/include/openssl/opensslv.h" 2>/dev/null ;;
-        libcurl) sed -n 's/.*LIBCURL_VERSION *"\([0-9][0-9.]*\).*/\1/p' "$SYSROOT/include/curl/curlver.h" 2>/dev/null ;;
-        libalpm) grep -oE 'PACMAN_TAG="v?[0-9.]+"' "$REPO_ROOT/bootstrap/build-pacman.sh" | grep -oE '[0-9.]+' ;;
-        libc++) grep -m1 '^# *define _LIBCPP_VERSION' \
-                    "$NDK_TOOLCHAIN/sysroot/usr/include/c++/v1/__config" 2>/dev/null \
-                    | awk '{printf "%d.%d.%d", int($4/10000), int($4/100)%100, $4%100}' ;;
+measure_version() {
+    case "$1" in
+        zlib)
+            sed -n 's/^#define[[:space:]][[:space:]]*ZLIB_VERSION[[:space:]][[:space:]]*"\([^"]*\)".*/\1/p' \
+                "$SYSROOT/include/zlib.h" 2>/dev/null | head -1 ;;
+        zstd)
+            awk '/^#define ZSTD_VERSION_MAJOR/{a=$3}
+                 /^#define ZSTD_VERSION_MINOR/{b=$3}
+                 /^#define ZSTD_VERSION_RELEASE/{c=$3}
+                 END{printf "%s.%s.%s", a, b, c}' \
+                "$SYSROOT/include/zstd.h" 2>/dev/null ;;
+        xz)
+            awk '/^#define LZMA_VERSION_MAJOR/{a=$3}
+                 /^#define LZMA_VERSION_MINOR/{b=$3}
+                 /^#define LZMA_VERSION_PATCH/{c=$3}
+                 END{printf "%s.%s.%s", a, b, c}' \
+                "$SYSROOT/include/lzma/version.h" 2>/dev/null ;;
+        openssl)
+            sed -n 's/^#[[:space:]]*define[[:space:]][[:space:]]*OPENSSL_VERSION_STR[[:space:]][[:space:]]*"\([^"]*\)".*/\1/p' \
+                "$SYSROOT/include/openssl/opensslv.h" 2>/dev/null | head -1 ;;
+        libarchive)
+            sed -n 's/^#define[[:space:]][[:space:]]*ARCHIVE_VERSION_ONLY_STRING[[:space:]][[:space:]]*"\([^"]*\)".*/\1/p' \
+                "$SYSROOT/include/archive.h" 2>/dev/null | head -1 ;;
+        libcurl)
+            sed -n 's/^#define[[:space:]][[:space:]]*LIBCURL_VERSION[[:space:]][[:space:]]*"\([^"]*\)".*/\1/p' \
+                "$SYSROOT/include/curl/curlver.h" 2>/dev/null | head -1 | sed 's/-DEV$//' ;;
+        libc++)
+            grep -m1 '^# *define _LIBCPP_VERSION' \
+                 "$NDK_TOOLCHAIN/sysroot/usr/include/c++/v1/__config" 2>/dev/null \
+                | awk '{printf "%d.%d.%d", int($4/10000), int($4/100)%100, $4%100}' ;;
     esac
 }
 
@@ -44,7 +62,7 @@ log_info "待处理库:${SELECTED[*]}"
 
 BUILT=()
 for spec in "${LIB_SPECS[@]}"; do
-    IFS='|' read -r pkgname so_patterns source_kind description <<< "$spec"
+    IFS='|' read -r pkgname so_patterns source_kind <<< "$spec"
 
     if ! printf '%s\n' "${SELECTED[@]}" | grep -qx "$pkgname"; then
         continue
@@ -76,14 +94,27 @@ for spec in "${LIB_SPECS[@]}"; do
         continue
     fi
 
-    VERSION="$(detect_version "$pkgname")"
-    if [[ -z "$VERSION" ]]; then
-        log_error "无法探测${pkgname}版本号,跳过"
-        continue
+    VERSION="$(manifest_require_version "$pkgname")"
+    MEASURED="$(measure_version "$pkgname")"
+    if [[ -z "$MEASURED" ]]; then
+        log_info "$pkgname头文件无可实测的版本标记,以清单为准:${VERSION}"
+    elif [[ "$MEASURED" != "$VERSION" ]]; then
+        if [[ "$source_kind" == "NDK" ]]; then
+            log_error "libc++版本与清单不符:NDK实测$MEASURED,清单期望$VERSION"
+            log_error "当前工具链不是清单钉住的那一颗,产物会与CI不一致"
+            log_error "换回钉住的NDK,或更新sync-archlinux.py中libc++/ndk版本后重新生成清单"
+        else
+            log_error "${pkgname}版本与清单不符:sysroot实测$MEASURED,清单$VERSION"
+            log_error "sysroot里是上一轮构建的旧库,直接切包会给旧库贴上新版本号"
+            log_error "请重新构建对应组件,或运行./scripts/sync-archlinux.py刷新清单"
+        fi
+        exit 1
     fi
 
+    description="$(manifest_desc "$pkgname")"
     if [[ -z "$description" ]]; then
         log_error "库包${pkgname}缺少描述,拒绝打包(index.json会把它变成null,前端只能显示空白卡片)"
+        log_error "请运行./scripts/sync-archlinux.py刷新清单,或在脚本内补上该包描述"
         exit 1
     fi
 

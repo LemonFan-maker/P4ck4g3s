@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-ZLIB_REPO="https://github.com/madler/zlib.git"
-ZLIB_TAG="v1.3.1"
 SRC_DIR="$BUILD_DIR/zlib"
 
-log_info ">>> 开始从GitHub获取并构建zlib(${ZLIB_TAG})..."
-git_clone_latest "$ZLIB_REPO" "$SRC_DIR" "$ZLIB_TAG"
+log_info ">>> 开始构建zlib(清单钉住$(manifest_ref zlib))..."
+fetch_source zlib "$SRC_DIR"
 apply_patches "zlib" "$SRC_DIR"
 
 cd "$SRC_DIR"

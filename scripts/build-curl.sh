@@ -3,6 +3,7 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
 STAGING_DIR="$BUILD_DIR/staging_curl"
 
@@ -33,17 +34,14 @@ if [[ -z "$RAW_VER" ]]; then
     log_error "若sysroot不完整,请先执行./bootstrap/build-curl.sh"
     exit 1
 fi
+RAW_VER="${RAW_VER%-DEV}"
 
-if [[ "$RAW_VER" == *-DEV* ]]; then
-    COMMIT=$(git -C "$SRC_DIR" rev-parse --short HEAD 2>/dev/null || true)
-    if [[ -z "$COMMIT" ]]; then
-        log_error "无法从$SRC_DIR取得commit,拒绝打包"
-        log_error "版本号必须能唯一标识构建,否则客户端无法升级"
-        exit 1
-    fi
-    CURRENT_VER="${RAW_VER%-DEV}.$(date -u +%Y%m%d%H%M%S).g${COMMIT}"
-else
-    CURRENT_VER="$RAW_VER"
+CURRENT_VER="$(manifest_require_version curl)"
+if [[ "$RAW_VER" != "$CURRENT_VER" ]]; then
+    log_error "curl版本与清单不符:sysroot为$RAW_VER,清单为$CURRENT_VER"
+    log_error "清单钉的是发布tag,版本不符说明sysroot不是本次清单对应的构建"
+    log_error "请重新执行./bootstrap/build-curl.sh,或运行./scripts/sync-archlinux.py刷新清单"
+    exit 1
 fi
 
 log_info ">>> 正在从sysroot收集curl(${CURRENT_VER})并打包..."
@@ -63,7 +61,7 @@ cp -a "$SYSROOT/include/curl" "$STAGING_DIR/include/"
     "curl" \
     "$CURRENT_VER" \
     "1" \
-    "多协议命令行传输工具与核心库(支持OpenSSL/zstd/HTTP2/Bionic优化)" \
+    "$(manifest_desc curl)" \
     "https://curl.se/" \
     "curl" \
     "base-layout" "ca-certificates"

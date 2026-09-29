@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-PACMAN_REPO="https://gitlab.archlinux.org/pacman/pacman.git"
-PACMAN_TAG="v7.1.0"
 SRC_DIR="$BUILD_DIR/pacman"
 
-log_info ">>> 开始从Arch Linux官方仓库获取并构建pacman(${PACMAN_TAG})..."
-git_clone_latest "$PACMAN_REPO" "$SRC_DIR" "$PACMAN_TAG"
+log_info ">>> 开始构建pacman(清单钉住$(manifest_ref pacman))..."
+fetch_source pacman "$SRC_DIR"
 apply_patches "pacman" "$SRC_DIR"
 
 cd "$SRC_DIR"
@@ -44,4 +43,4 @@ if [[ -d "$SYSROOT/lib" ]]; then
     cp -P "$SYSROOT/lib"/libalpm* "$SYSROOT/lib64/" 2>/dev/null || true
 fi
 
-log_success "pacman ${PACMAN_TAG}构建安装完成!"
+log_success "pacman构建安装完成!"

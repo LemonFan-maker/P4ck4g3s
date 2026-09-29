@@ -3,11 +3,8 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
-WGET_VER="1.24.5"
-WGET_TAR="wget-${WGET_VER}.tar.gz"
-WGET_URL="https://ftp.gnu.org/gnu/wget/${WGET_TAR}"
-WGET_URL_FALLBACK="https://mirrors.kernel.org/gnu/wget/${WGET_TAR}"
 SRC_DIR="$BUILD_DIR/wget"
 STAGING_DIR="$BUILD_DIR/staging_wget"
 
@@ -20,21 +17,16 @@ if [[ ! -f "$SYSROOT/lib64/libssl.so" || ! -f "$SYSROOT/lib64/libcrypto.so" ]]; 
     "$REPO_ROOT/bootstrap/build-openssl.sh"
 fi
 
-log_info ">>> 获取并构建GNU Wget(${WGET_VER})..."
+log_info ">>> 开始构建GNU Wget(清单钉住$(manifest_require_version wget))..."
 
-if [[ ! -f "$DOWNLOADS_DIR/$WGET_TAR" ]]; then
-    download_tarball "$WGET_URL" "$WGET_TAR" || download_tarball "$WGET_URL_FALLBACK" "$WGET_TAR"
-fi
-
-rm -rf "$SRC_DIR" "$STAGING_DIR"
-mkdir -p "$SRC_DIR" "$STAGING_DIR/bin" "$STAGING_DIR/etc"
-tar -xzf "$DOWNLOADS_DIR/$WGET_TAR" --strip-components=1 -C "$SRC_DIR"
+rm -rf "$STAGING_DIR"
+mkdir -p "$STAGING_DIR/bin" "$STAGING_DIR/etc"
+fetch_source wget "$SRC_DIR"
 apply_patches "wget" "$SRC_DIR"
 
 cd "$SRC_DIR"
 
-CURRENT_VER=$(grep -m1 "PACKAGE_VERSION=" configure 2>/dev/null | cut -d"'" -f2 || echo "1.24.5")
-[[ -z "$CURRENT_VER" ]] && CURRENT_VER="1.24.5"
+CURRENT_VER="$(manifest_require_version wget)"
 
 export CFLAGS="-O2 -pipe -fPIC -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -I$SYSROOT/include"
 export LDFLAGS="-L$SYSROOT/lib -L$SYSROOT/lib64 -lssl -lcrypto -lz -Wl,-rpath,'\$ORIGIN/../lib64' -Wl,--enable-new-dtags"
@@ -79,7 +71,7 @@ EOF
     "wget" \
     "$CURRENT_VER" \
     "1" \
-    "经典非交互式命令行网络下载器(GNU Wget,支持HTTPS/断点续传/OpenSSL)" \
+    "$(manifest_desc wget)" \
     "https://www.gnu.org/software/wget/" \
     "GPL-3.0-or-later" \
     "base-layout" "ca-certificates"

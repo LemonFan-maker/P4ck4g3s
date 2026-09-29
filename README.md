@@ -17,6 +17,7 @@ P4ck4g3s/
 ├── .github/workflows/
 ├── bootstrap/
 ├── scripts/
+├── manifest/
 ├── output/repo/
 └── README.md
 ```
@@ -27,12 +28,13 @@ P4ck4g3s/
 2. **RPATH隔离**:编译时注入`-Wl,-rpath,'$ORIGIN/../lib64' -Wl,--enable-new-dtags`,避免与Android系统库冲突。
 3. **依赖自动推导**:库依赖通过`scripts/elfdeps.py`分析ELF的DT_NEEDED自动生成,杜绝漏写与冗余。
 4. **文件归属唯一**:每个文件严格归属单一软件包(库文件归各库包,二进制归对应工具包,基础配置归base-layout)。
+5. **版本单一来源**:`manifest/components.manifest`是所有版本号、上游地址与包描述的唯一来源,由`scripts/sync-archlinux.py`从Arch官方源生成,构建脚本经`scripts/manifest.sh`读取。清单漂移在CI构建前即失败(`sync-archlinux.py --check`);NDK版本与tarball sha256同样以清单为钉值,`bootstrap/env.sh`构建前实测校验。详见`manifest/README.md`。
 
 ## 4.快速上手
 
 ### 环境要求
 - Ubuntu 22.04+或Arch Linux宿主机
-- Android NDK r26d(通过环境变量`ANDROID_NDK_ROOT`指定)
+- Android NDK r30(钉在`manifest/components.manifest`的ndk行,通过环境变量`ANDROID_NDK_ROOT`指定)
 - 宿主工具:cmake,ninja,meson,zstd,patchelf,libalpm-dev
 
 ### 一键全量构建
@@ -66,19 +68,19 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 ### 目录布局
 
 ```
-/                                    ← pacman 按 Server 基准取,强制平铺
-  0vl0ad3r.db       -> 0vl0ad3r.db.tar.zst
-  0vl0ad3r.files    -> 0vl0ad3r.files.tar.zst
-  index.json                        ← 客户端发现接口
-  <N 个 .pkg.tar.zst>
+/ (pacman按Server基准取,强制平铺)
+  0vl0ad3r.db -> 0vl0ad3r.db.tar.zst
+  0vl0ad3r.files -> 0vl0ad3r.files.tar.zst
+  index.json (客户端发现接口)
+  <N个.pkg.tar.zst>
   CNAME
-/bootstrap/                         ← 非 pacman 资源,可自由分层
+/bootstrap/ (非pacman资源,可自由分层)
   0vl0ad3r-bootstrap-aarch64.tar.zst
 ```
 
-根目录必须平铺:libalpm 拼接远端URL时,db走`db->servers`+`/<treename><ext>`(`be_sync.c:189-194`),包走`server`+`/<文件名>`(`dload.c:774`),**共用同一个`Server`基准且路径均为裸文件名**,没有"包放子目录"的配置项。因此`pool/`那类布局在apt上成立(apt从`deb`行的`uri`+component推导包路径),在pacman上不成立。
+根目录必须平铺:libalpm拼接远端URL时,db走`db->servers`+`/<treename><ext>`(`be_sync.c:189-194`),包走`server`+`/<文件名>`(`dload.c:774`),**共用同一个`Server`基准且路径均为裸文件名**,没有"包放子目录"的配置项。因此`pool/`那类布局在apt上成立(apt从`deb`行的`uri`+component推导包路径),在pacman上不成立。
 
-引导种子包不由pacman拉取(客户端从APK asset `app/src/main/assets/bootstrap/` 读取),故可放进子目录;这里刻意与APK asset保持同一路径,维护时只需记一套。
+引导种子包不由pacman拉取(客户端从APK asset`app/src/main/assets/bootstrap/`读取),故可放进子目录;这里刻意与APK asset保持同一路径,维护时只需记一套。
 
 ## 6.开源协议
 

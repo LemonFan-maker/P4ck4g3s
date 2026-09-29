@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-CURL_REPO="https://github.com/curl/curl.git"
-CURL_REF="master"
 SRC_DIR="$BUILD_DIR/curl"
 
-log_info ">>> 开始从GitHub获取并构建curl(${CURL_REF})..."
-git_clone_latest "$CURL_REPO" "$SRC_DIR" "$CURL_REF"
+log_info ">>> 开始构建curl(清单钉住$(manifest_ref curl))..."
+fetch_source curl "$SRC_DIR"
 apply_patches "curl" "$SRC_DIR"
 
 cd "$SRC_DIR"

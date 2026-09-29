@@ -3,11 +3,8 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
-ARIA2_REPO="https://github.com/aria2/aria2.git"
-ARIA2_VER="latest"
-ARIA2_TAR="aria2-1.37.0.tar.xz"
-ARIA2_URL="https://github.com/aria2/aria2/releases/download/release-1.37.0/${ARIA2_TAR}"
 SRC_DIR="$BUILD_DIR/aria2"
 STAGING_DIR="$BUILD_DIR/staging_aria2"
 
@@ -20,17 +17,8 @@ if [[ ! -f "$SYSROOT/lib64/libssl.so" || ! -f "$SYSROOT/lib64/libcrypto.so" ]]; 
     "$REPO_ROOT/bootstrap/build-openssl.sh"
 fi
 
-log_info ">>> 开始从GitHub浅克隆最新代码并构建aria2(master)..."
-if ! git_clone_latest "$ARIA2_REPO" "$SRC_DIR" "master" 2>/dev/null; then
-    log_info "Git克隆受限,自动回退至官方发布镜像源..."
-    download_tarball "$ARIA2_URL" "$ARIA2_TAR"
-    rm -rf "$SRC_DIR"
-    mkdir -p "$SRC_DIR"
-    tar -xf "$DOWNLOADS_DIR/$ARIA2_TAR" -C "$BUILD_DIR"
-    if [[ -d "$BUILD_DIR/aria2-1.37.0" ]]; then
-        mv "$BUILD_DIR/aria2-1.37.0"/* "$SRC_DIR/" 2>/dev/null || true
-    fi
-fi
+log_info ">>> 开始构建aria2(清单钉住$(manifest_require_version aria2))..."
+fetch_source aria2 "$SRC_DIR"
 apply_patches "aria2" "$SRC_DIR"
 
 cd "$SRC_DIR"
@@ -39,25 +27,20 @@ mkdir -p "$STAGING_DIR/bin" "$STAGING_DIR/etc/aria2"
 
 if [[ ! -f configure ]]; then
     log_info "正在生成configure脚本(autoreconf -fi)..."
-    autoreconf -fi 2>/dev/null || true
+    if ! autoreconf -fi; then
+        log_error "autoreconf -fi失败,aria2无法生成configure(上面是autotools的原始报错)"
+        log_error "宿主需要autoconf / automake / libtool / gettext"
+        exit 1
+    fi
 fi
 
 if [[ ! -f configure ]]; then
-    log_info "Git源码树缺少预构建configure,自动加载官方发布镜像包..."
-    download_tarball "$ARIA2_URL" "$ARIA2_TAR"
-    rm -rf "$SRC_DIR"
-    mkdir -p "$SRC_DIR"
-    tar -xf "$DOWNLOADS_DIR/$ARIA2_TAR" --strip-components=1 -C "$SRC_DIR"
-    apply_patches "aria2" "$SRC_DIR"
-    cd "$SRC_DIR"
-fi
-
-CURRENT_VER=$(sed -n "s/^PACKAGE_VERSION='\([^']*\)'.*/\1/p" configure 2>/dev/null | head -1 || true)
-if [[ -z "$CURRENT_VER" ]]; then
-    log_error "无法从configure解析aria2的PACKAGE_VERSION,拒绝打包"
+    log_error "aria2源码树仍缺少configure,拒绝构建"
+    log_error "aria2走git ref而非tarball,上游仓库不带configure,只能靠上面的autoreconf生成"
     exit 1
 fi
-CURRENT_VER="$(git_pkgver "$SRC_DIR" "$CURRENT_VER")"
+
+CURRENT_VER="$(manifest_require_version aria2)"
 
 export CFLAGS="-O2 -pipe -fPIC -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -I$SYSROOT/include"
 export CXXFLAGS="-O2 -pipe -fPIC -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -I$SYSROOT/include"
@@ -108,7 +91,7 @@ EOF
     "aria2" \
     "$CURRENT_VER" \
     "1" \
-    "极速多协议多线程命令行与RPC下载实用工具(aria2c,支持HTTP/HTTPS/FTP/断点续传)" \
+    "$(manifest_desc aria2)" \
     "https://aria2.github.io/" \
     "GPL-2.0-or-later" \
     "base-layout" "ca-certificates"

@@ -57,8 +57,6 @@ EOF
 
 cat <<'EOF' > "$STAGE_DIR/etc/pacman.d/mirrorlist"
 Server = https://r3p0.orionisli.com
-# Releases 仅在打过 tag 后才有产物, 首次打 tag 前这一条对每个包都会 404。
-# pacman 会按顺序回退, 所以它只在 tag 之后才真正起冗余作用。
 Server = https://github.com/LemonFan-maker/P4ck4g3s/releases/latest/download
 EOF
 

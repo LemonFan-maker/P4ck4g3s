@@ -3,6 +3,7 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
 STAGE="$BUILD_DIR/stage_bootstrap_pkg"
 
@@ -28,11 +29,7 @@ if [[ ${#MISSING[@]} -gt 0 ]]; then
     exit 1
 fi
 
-PACMAN_VERSION="$(sed -n 's/^PACMAN_TAG="v\?\([0-9][0-9.]*\)".*/\1/p' "$REPO_ROOT/bootstrap/build-pacman.sh" | head -1)"
-if [[ -z "$PACMAN_VERSION" ]]; then
-    log_error "无法从bootstrap/build-pacman.sh解析PACMAN_TAG,拒绝用猜测版本打包"
-    exit 1
-fi
+PACMAN_VERSION="$(manifest_require_version pacman)"
 BOOTSTRAP_VER="$PACMAN_VERSION"
 BOOTSTRAP_REL="1"
 
@@ -44,7 +41,7 @@ log_info ">>> pacman自举包归属文件清单:"
     "pacman" \
     "$BOOTSTRAP_VER" \
     "$BOOTSTRAP_REL" \
-    "Arch pacman包管理器(Bionic aarch64原生版)及配套的zstd/xz二进制" \
+    "$(manifest_desc pacman)" \
     "https://github.com/LemonFan-maker/P4ck4g3s" \
     "GPL-2.0-or-later" \
     "base-layout" "ca-certificates"

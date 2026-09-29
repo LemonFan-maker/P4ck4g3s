@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-ARCHIVE_REPO="https://github.com/libarchive/libarchive.git"
-ARCHIVE_TAG="v3.8.9"
 SRC_DIR="$BUILD_DIR/libarchive"
 
-log_info ">>> 开始从GitHub获取并构建libarchive(${ARCHIVE_TAG})..."
-git_clone_latest "$ARCHIVE_REPO" "$SRC_DIR" "$ARCHIVE_TAG"
+log_info ">>> 开始构建libarchive(清单钉住$(manifest_ref libarchive))..."
+fetch_source libarchive "$SRC_DIR"
 apply_patches "libarchive" "$SRC_DIR"
 
 cd "$SRC_DIR"

@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-ZSTD_REPO="https://github.com/facebook/zstd.git"
-ZSTD_TAG="v1.5.6"
 SRC_DIR="$BUILD_DIR/zstd"
 
-log_info ">>> 开始从GitHub获取并构建zstd(${ZSTD_TAG})..."
-git_clone_latest "$ZSTD_REPO" "$SRC_DIR" "$ZSTD_TAG"
+log_info ">>> 开始构建zstd(清单钉住$(manifest_ref zstd))..."
+fetch_source zstd "$SRC_DIR"
 apply_patches "zstd" "$SRC_DIR"
 
 cd "$SRC_DIR"

@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-OPENSSL_REPO="https://github.com/openssl/openssl.git"
-OPENSSL_BRANCH="openssl-3.4"
 SRC_DIR="$BUILD_DIR/openssl"
 
-log_info ">>> 开始从GitHub获取并构建OpenSSL(${OPENSSL_BRANCH})..."
-git_clone_latest "$OPENSSL_REPO" "$SRC_DIR" "$OPENSSL_BRANCH"
+log_info ">>> 开始构建OpenSSL(清单钉住$(manifest_ref openssl))..."
+fetch_source openssl "$SRC_DIR"
 apply_patches "openssl" "$SRC_DIR"
 
 cd "$SRC_DIR"

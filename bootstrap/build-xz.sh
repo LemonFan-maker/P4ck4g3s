@@ -2,13 +2,12 @@
 set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/../scripts/manifest.sh"
 
-XZ_REPO="https://github.com/tukaani-project/xz.git"
-XZ_TAG="v5.6.3"
 SRC_DIR="$BUILD_DIR/xz"
 
-log_info ">>> 开始从GitHub获取并构建xz(${XZ_TAG})..."
-git_clone_latest "$XZ_REPO" "$SRC_DIR" "$XZ_TAG"
+log_info ">>> 开始构建xz(清单钉住$(manifest_ref xz))..."
+fetch_source xz "$SRC_DIR"
 apply_patches "xz" "$SRC_DIR"
 
 cd "$SRC_DIR"

@@ -3,8 +3,8 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
+source "$SCRIPT_DIR/manifest.sh"
 
-VIM_REPO="https://github.com/vim/vim.git"
 SRC_DIR="$BUILD_DIR/vim"
 STAGING_DIR="$BUILD_DIR/staging_vim"
 
@@ -13,8 +13,8 @@ if [[ ! -f "$SYSROOT/lib64/libncursesw.so" && ! -f "$SYSROOT/lib/libncursesw.so"
     "$REPO_ROOT/bootstrap/build-ncurses.sh"
 fi
 
-log_info ">>> 开始从GitHub浅克隆最新代码并构建Vim(master)..."
-git_clone_latest "$VIM_REPO" "$SRC_DIR" "master"
+log_info ">>> 开始构建Vim(清单钉住$(manifest_ref vim))..."
+fetch_source vim "$SRC_DIR"
 apply_patches "vim" "$SRC_DIR"
 
 cd "$SRC_DIR"
@@ -23,13 +23,20 @@ mkdir -p "$STAGING_DIR/bin" "$STAGING_DIR/etc" "$STAGING_DIR/share"
 
 VMAJOR=$(sed -n 's/^#define[[:space:]]\+VIM_VERSION_MAJOR[[:space:]]\+\([0-9]\{1,\}\).*/\1/p' src/version.h | head -1)
 VMINOR=$(sed -n 's/^#define[[:space:]]\+VIM_VERSION_MINOR[[:space:]]\+\([0-9]\{1,\}\).*/\1/p' src/version.h | head -1)
-VBUILD=$(sed -n 's/^#define[[:space:]]\+VIM_VERSION_BUILD[[:space:]]\+\([0-9]\{1,\}\).*/\1/p' src/version.h | head -1)
-if [[ -z "$VMAJOR" || -z "$VMINOR" || -z "$VBUILD" ]]; then
-    log_error "无法从src/version.h解析vim版本(MAJOR=$VMAJOR MINOR=$VMINOR BUILD=$VBUILD),拒绝打包"
+VPATCH=$(awk '/static int included_patches/,/^};/' src/version.c \
+    | sed -n 's/^[[:space:]]*\([0-9][0-9]*\),[[:space:]]*$/\1/p' | head -1)
+if [[ -z "$VMAJOR" || -z "$VMINOR" || -z "$VPATCH" ]]; then
+    log_error "无法解析vim版本(MAJOR=$VMAJOR MINOR=$VMINOR PATCH=$VPATCH),拒绝打包"
     exit 1
 fi
 
-CURRENT_VER="$(git_pkgver "$SRC_DIR" "${VMAJOR}.${VMINOR}.${VBUILD}")"
+SOURCE_VER="${VMAJOR}.${VMINOR}.${VPATCH}"
+CURRENT_VER="$(manifest_require_version vim)"
+if [[ "$CURRENT_VER" != "$SOURCE_VER" ]]; then
+    log_error "vim版本与清单不符:源码为$SOURCE_VER,清单为$CURRENT_VER"
+    log_error "请运行./scripts/sync-archlinux.py刷新清单,或确认ref是否已指向新版本"
+    exit 1
+fi
 
 export vim_cv_toupper_broken=no
 export vim_cv_terminfo=yes
@@ -120,7 +127,7 @@ EOF
     "vim" \
     "$CURRENT_VER" \
     "1" \
-    "全功能高级终端文本编辑器(Vi IMproved,包含xxd/语法高亮/Unicode支持)" \
+    "$(manifest_desc vim)" \
     "https://www.vim.org/" \
     "Vim" \
     "base-layout"

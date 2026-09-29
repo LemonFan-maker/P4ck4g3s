@@ -7,6 +7,7 @@ on:
       - 'bootstrap/**'
       - 'scripts/**'
       - 'patches/**'
+      - 'manifest/**'
       - '.github/workflows/build-packages.yml'
     tags:
       - 'v*'
@@ -16,6 +17,7 @@ on:
       - 'bootstrap/**'
       - 'scripts/**'
       - 'patches/**'
+      - 'manifest/**'
       - '.github/workflows/build-packages.yml'
   workflow_dispatch:
 
@@ -40,10 +42,6 @@ jobs:
       - name: Install Host Tools
         run: |
           sudo apt-get update
-          # libarchive-dev 不能省: alpm.h 会 #include <archive.h>,
-          # 只有 libarchive-tools(bsdtar 本体)不含头文件, 门禁编译会失败。
-          # 注释必须留在续行之外 —— 反斜杠续行会把整个块拼成一条逻辑行,
-          # 行内的 # 会把后面所有包名一起注释掉。
           sudo apt-get install -y \
             build-essential cmake ninja-build meson pkg-config \
             zstd curl ca-certificates tar xz-utils unzip \
@@ -60,28 +58,39 @@ jobs:
       - name: Install libalpm for the verification gate
         run: |
           sudo apt-get install -y libalpm-dev
-          # 断言方式必须和门禁本身一致: scripts/verify-packages.sh 用
-          # `cc -o ... -lalpm` 编译, 从不调用 pkg-config。
-          # libalpm.pc 的 Requires.private 列出 gpgme / libcurl 等**静态链接**
-          # 才需要的依赖, 本项目是动态链接根本不用它们, 所以
-          # `pkg-config --exists libalpm` 即使编译完全正常也会返回失败。
           printf '#include <alpm.h>\nint main(void){return alpm_version()?0:1;}\n' \
             > /tmp/alpm-probe.c
           cc -O2 -o /tmp/alpm-probe /tmp/alpm-probe.c -lalpm || \
             { echo "::error::libalpm不可用,门禁的libalpm段将无法运行(缺libarchive-dev?)"; exit 1; }
           /tmp/alpm-probe
 
+      - name: Check Manifest Matches Arch Upstream
+        run: |
+          ./scripts/sync-archlinux.py --check
+
+      - name: Refresh Manifest
+        if: failure()
+        continue-on-error: true
+        run: ./scripts/sync-archlinux.py
+
+      - name: Upload Refreshed Manifest Diff
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-manifest
+          path: manifest/components.manifest
+          retention-days: 7
+
       - name: Setup Android NDK
         run: |
-          # 钉在 r30: r26d 的 Bionic limits.h 不定义 LINE_MAX, pacman 的
-          # lib/libalpm/util.c 会在 "use of undeclared identifier 'LINE_MAX'"
-          # 上编译失败(已用 NDK 官方 clang + #error 探针在容器里复现)。
-          # r30 是本地跑通全部 18 个包与三道门禁的那一版, CI 必须复现同一配置。
-          NDK_ZIP=android-ndk-r30-linux.zip
+          NDK_PIN=$(python3 scripts/manifest-query.py ndk version)
+          test -n "$NDK_PIN" || { echo "::error::清单里没有ndk版本"; exit 1; }
+          echo "按清单安装Android NDK $NDK_PIN"
+          NDK_ZIP="android-ndk-${NDK_PIN}-linux.zip"
           curl -fsSL -o "/tmp/$NDK_ZIP" \
             "https://dl.google.com/android/repository/$NDK_ZIP"
           sudo unzip -q "/tmp/$NDK_ZIP" -d /opt
-          sudo mv /opt/android-ndk-r30 /opt/android-ndk
+          sudo mv "/opt/android-ndk-${NDK_PIN}" /opt/android-ndk
           echo "ANDROID_NDK_ROOT=/opt/android-ndk" >> "$GITHUB_ENV"
 
       - name: Build Everything
@@ -98,6 +107,7 @@ jobs:
             echo "::error::index.json($idx)与实际包数($ovp)不一致"
             exit 1
           }
+          ./scripts/verify-packages.sh
 
       - name: Prepare Publish Directory
         run: |

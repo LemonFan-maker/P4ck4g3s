@@ -57,13 +57,13 @@ for pkg in index["packages"]:
         continue
     actual_size = path.stat().st_size
     if actual_size != pkg["size"]:
-        failures.append(f"{name}: size不符(索引{pkg['size']}/实际{actual_size})")
+        failures.append(f"{name}:size不符(索引{pkg['size']}/实际{actual_size})")
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     if h.hexdigest() != pkg["sha256"]:
-        failures.append(f"{name}: sha256不符(会致客户端下载校验失败)")
+        failures.append(f"{name}:sha256不符(会致客户端下载校验失败)")
     for dep in pkg.get("depends") or []:
         if dep not in {p["name"] for p in index["packages"]}:
             failures.append(f"{name}:悬空依赖{dep}")
