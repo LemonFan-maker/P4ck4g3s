@@ -20,6 +20,16 @@ if [[ "$PKG_COUNT" -eq 0 ]]; then
     exit 1
 fi
 
+# 引导种子包不由 pacman 拉取(客户端从 APK asset 读取, 这里是给手动/CLI 引导
+# 留的稳定下载地址), 所以可以放进子目录。路径与客户端
+# app/src/main/assets/bootstrap/ 保持一致, 维护时只需记一套。
+BOOTSTRAP_SEED="$REPO_ROOT/output/bootstrap/0vl0ad3r-bootstrap-aarch64.tar.zst"
+if [[ ! -f "$BOOTSTRAP_SEED" ]]; then
+    echo "[-] 错误:引导种子包不存在($BOOTSTRAP_SEED)" >&2
+    echo "    请确认已执行 ./scripts/build-all-tools.sh 或 ./bootstrap/build-all.sh" >&2
+    exit 1
+fi
+
 echo -e "\033[1;34m[*] 正在准备gh-pages发布目录:$DEST(${PKG_COUNT}个包)\033[0m"
 
 rm -rf "$DEST"
@@ -29,6 +39,8 @@ cp -a "$REPO_SRC"/*.pkg.tar.zst "$DEST/"
 cp -a "$REPO_SRC/index.json" "$DEST/"
 cp -a "$REPO_SRC/0vl0ad3r.db.tar.zst" "$DEST/"
 cp -a "$REPO_SRC/0vl0ad3r.files.tar.zst" "$DEST/"
+mkdir -p "$DEST/bootstrap"
+cp -a "$BOOTSTRAP_SEED" "$DEST/bootstrap/"
 
 ln -sf 0vl0ad3r.db.tar.zst "$DEST/0vl0ad3r.db"
 ln -sf 0vl0ad3r.files.tar.zst "$DEST/0vl0ad3r.files"

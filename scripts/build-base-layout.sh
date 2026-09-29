@@ -12,9 +12,10 @@ if [[ -n "${OVL0AD3R_MIRROR:-}" ]]; then
 elif [[ -n "${OVL0AD3R_DOMAIN:-}" ]]; then
     MIRROR_PRIMARY="https://${OVL0AD3R_DOMAIN}"
 else
-    # 兜底走 gh-pages: CI 每次推 main 都部署, 而 releases 只在打 tag 时才有产物,
-    # 新仓库在首次打 tag 之前 releases/latest/download 是 404。
-    MIRROR_PRIMARY="https://lemonfan-maker.github.io/P4ck4g3s"
+    # 兜底走自定义域名。r3p0.orionisli.com 经 DNS 指向本仓库的 gh-pages 站点,
+    # 与 *.github.io 同源同内容, 换域名不必重新打包。CI 里会由
+    # OVL0AD3R_DOMAIN 走上面的分支, 这里只覆盖本地无环境变量的构建。
+    MIRROR_PRIMARY="https://r3p0.orionisli.com"
 fi
 
 log_info ">>> 开始构建base-layout(${BASE_LAYOUT_VER})..."

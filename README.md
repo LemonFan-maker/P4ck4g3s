@@ -8,7 +8,7 @@
 1. **Bionic依赖库交叉编译**:在Android NDK环境下构建zstd、openssl、libarchive、libcurl、ncurses等基础库。
 2. **pacman包管理器移植**:提供适用于ARM64 Bionic的原生pacman/libalpm及自举环境。
 3. **常用工具链打包**:维护curl、wget、aria2、nano、vim等工具的.pkg.tar.zst标准包。
-4. **自动化CI/CD与分发**:通过GitHub Actions全自动编译,生成软件源数据库(0vl0ad3r.db.tar.zst)与前端索引(index.json),支持GitHub Pages与Releases两种分发。
+4. **自动化CI/CD与分发**:通过GitHub Actions全自动编译,生成软件源数据库(0vl0ad3r.db.tar.zst)与前端索引(index.json),发布到`gh-pages`分支。
 
 ## 2.目录结构
 
@@ -59,9 +59,26 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 
 ## 5.分发与发布
 
-- **分支推送**:向`main`分支推送代码触发自动构建,产物发布至`gh-pages`分支。
-- **版本发布**:推送`v*`标签时自动创建GitHub Release并附带所有软件包归档。
-- **自定义域名**:在仓库Settings->Secrets and variables->Actions中配置`OVL0AD3R_DOMAIN`即可自动配置CNAME与镜像源列表。
+- **分支推送**:向`main`分支推送代码触发自动构建,产物发布至`gh-pages`分支。这是**唯一在用的软件源**,db与包作为同一次提交落下,始终自洽。
+- **版本发布**:推送`v*`标签时自动创建GitHub Release并附带所有软件包归档,作为可复现的**版本快照**。注意该步骤与上面的`gh-pages`部署互斥(前者仅在tag时触发,后者仅在非tag时触发),所以**首次打tag之前Releases是空的**。
+- **自定义域名**:已绑定<https://r3p0.orionisli.com>。DNS指向本仓库的`gh-pages`站点,与`*.github.io`同源同内容,换域名不必重新打包。在仓库Settings->Secrets and variables->Actions中配置`OVL0AD3R_DOMAIN`变量后,`publish-repo.sh`会自动写入`CNAME`并把该域名作为镜像源列表的首选地址。
+
+### 目录布局
+
+```
+/                                    ← pacman 按 Server 基准取,强制平铺
+  0vl0ad3r.db       -> 0vl0ad3r.db.tar.zst
+  0vl0ad3r.files    -> 0vl0ad3r.files.tar.zst
+  index.json                        ← 客户端发现接口
+  <N 个 .pkg.tar.zst>
+  CNAME
+/bootstrap/                         ← 非 pacman 资源,可自由分层
+  0vl0ad3r-bootstrap-aarch64.tar.zst
+```
+
+根目录必须平铺:libalpm 拼接远端URL时,db走`db->servers`+`/<treename><ext>`(`be_sync.c:189-194`),包走`server`+`/<文件名>`(`dload.c:774`),**共用同一个`Server`基准且路径均为裸文件名**,没有"包放子目录"的配置项。因此`pool/`那类布局在apt上成立(apt从`deb`行的`uri`+component推导包路径),在pacman上不成立。
+
+引导种子包不由pacman拉取(客户端从APK asset `app/src/main/assets/bootstrap/` 读取),故可放进子目录;这里刻意与APK asset保持同一路径,维护时只需记一套。
 
 ## 6.开源协议
 
