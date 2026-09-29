@@ -38,7 +38,7 @@ manifest_require_version() {
 
 fetch_source() {
     local pkg="$1" src_dir="$2"
-    local repo ref tar tar_url tar_fallback
+    local repo ref tar tar_url tar_fallback sha candidate
 
     if ! repo="$(manifest_repo "$pkg")" || [[ -z "$repo" ]]; then
         tar="$(manifest_tar "$pkg")" || true
@@ -48,11 +48,26 @@ fetch_source() {
         fi
         tar_url="$(manifest_tar_url "$pkg")"
         tar_fallback="$(manifest_tar_fallback "$pkg")"
-        download_tarball "$tar_url" "$tar" || download_tarball "$tar_fallback" "$tar" || {
-            echo -e "\033[1;31m[-] $pkg的tarball下载失败($tar_url / $tar_fallback)\033[0m"
+        # 回退必须覆盖"传输成功但内容不对"这一档。镜像偶尔会返回一个完整的错误
+        # 响应, curl 退出 0; 只按下载失败回退会漏掉它, 坏产物会一路走到 sha256
+        # 门禁才失败, 白白浪费一次构建。
+        sha="$(manifest_sha256 "$pkg")"
+        local fetched=1
+        for candidate in "$tar_url" "$tar_fallback"; do
+            [[ -z "$candidate" ]] && continue
+            if download_tarball "$candidate" "$tar" \
+                && verify_sha256 "$DOWNLOADS_DIR/$tar" "$sha" "$pkg"; then
+                fetched=0
+                break
+            fi
+            # 该源不可信, 丢弃其产物; 否则下一个源会命中"缓存已存在"而不再重取,
+            # 于是坏文件被当成好文件继续用。
+            rm -f "$DOWNLOADS_DIR/$tar"
+        done
+        if [[ "$fetched" -ne 0 ]]; then
+            echo -e "\033[1;31m[-] $pkg的tarball在$tar_url与$tar_fallback均未通过sha256\033[0m"
             return 1
-        }
-        verify_sha256 "$DOWNLOADS_DIR/$tar" "$(manifest_sha256 "$pkg")" "$pkg" || return 1
+        fi
         rm -rf "$src_dir"
         mkdir -p "$src_dir"
         tar -xf "$DOWNLOADS_DIR/$tar" --strip-components=1 -C "$src_dir"

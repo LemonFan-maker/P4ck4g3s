@@ -134,11 +134,21 @@ download_tarball() {
 
     if [[ -f "$target_path" ]]; then
         log_info "缓存已存在:$dest_filename"
-    else
-        log_info "正在下载:$url -> $dest_filename"
-        curl -fSL "$url" -o "$target_path"
-        log_success "下载完成:$dest_filename"
+        return 0
     fi
+
+    log_info "正在下载:$url -> $dest_filename"
+    # 本函数总在 || / if 条件里被调用, set -e 对条件上下文中的函数不生效,
+    # 因此必须显式传递 curl 的状态。早先以 log_success 收尾, 恒返回 0,
+    # "下载失败就换回退源"那条分支从来没被走到过。
+    # --remove-on-error: 传输中断时不把半截文件留在缓存里, 否则下次会命中
+    # "缓存已存在"直接拿它去解压, 把一次网络抖动变成确定的构建失败。
+    if ! curl -fSL --retry 3 --retry-all-errors --remove-on-error "$url" -o "$target_path"; then
+        log_error "下载失败:$url"
+        return 1
+    fi
+    log_success "下载完成:$dest_filename"
+    return 0
 }
 
 verify_sha256() {
