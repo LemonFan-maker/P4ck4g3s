@@ -48,6 +48,12 @@ jobs:
             libarchive-tools libarchive-dev patchelf \
             autoconf automake libtool gettext libssl-dev \
             python3
+          # autopoint 必须显式装: 它是独立包, gettext 不带、autoconf 也不 Recommends,
+          # 而 aria2 的 git 树没有预生成 configure, autoreconf -fi 要靠它。
+          # GitHub runner 镜像恰好预装了它, 掩盖了这个依赖 —— 换 runner 或在干净的
+          # ubuntu 容器里构建就会在 aria2 上炸, 所以不能靠镜像的偶然内容。
+          sudo apt-get install -y autopoint
+          command -v autopoint
 
       - name: Install repo-add
         run: |
