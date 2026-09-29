@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -eo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
+
+XZ_REPO="https://github.com/tukaani-project/xz.git"
+XZ_TAG="v5.6.3"
+SRC_DIR="$BUILD_DIR/xz"
+
+log_info ">>> 开始从GitHub获取并构建xz(${XZ_TAG})..."
+git_clone_latest "$XZ_REPO" "$SRC_DIR" "$XZ_TAG"
+apply_patches "xz" "$SRC_DIR"
+
+cd "$SRC_DIR"
+cmake -B build -S . \
+    -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    -DCMAKE_INSTALL_PREFIX="$SYSROOT" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=ON \
+    -DXZ_MICROLZMA=OFF \
+    -DXZ_LZIP_DECODER=OFF
+
+cmake --build build --parallel "$(nproc)"
+cmake --install build
+
+if [[ -d "$SYSROOT/lib" ]]; then
+    mkdir -p "$SYSROOT/lib64"
+    cp -P "$SYSROOT/lib"/liblzma* "$SYSROOT/lib64/" 2>/dev/null || true
+fi
+
+log_success "xz构建安装完成!"

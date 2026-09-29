@@ -1,0 +1,66 @@
+name: Build Bootstrap Toolchain
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'bootstrap/**'
+      - 'patches/**'
+      - '.github/workflows/build-bootstrap.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'bootstrap/**'
+      - 'patches/**'
+      - '.github/workflows/build-bootstrap.yml'
+  workflow_dispatch:
+
+jobs:
+  build-aarch64:
+    runs-on: ubuntu-24.04
+    name: Build Bionic aarch64 Bootstrap
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Host Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            meson \
+            pkg-config \
+            libarchive-tools \
+            zstd \
+            curl \
+            tar \
+            libarchive-dev \
+            libssl-dev
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          add-to-path: true
+
+      - name: Build Bootstrap Toolchain
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          chmod +x bootstrap/*.sh
+          ./bootstrap/build-all.sh
+
+      - name: Upload Bootstrap Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0vl0ad3r-bootstrap-aarch64
+          path: |
+            output/bootstrap/*.tar.zst
+            output/bootstrap/bin/*
+            output/bootstrap/lib64/*
+            output/bootstrap/etc/*
+          if-no-files-found: error

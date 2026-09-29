@@ -1,0 +1,119 @@
+name: Build Packages & Publish Repository
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'bootstrap/**'
+      - 'scripts/**'
+      - 'patches/**'
+      - '.github/workflows/build-packages.yml'
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'bootstrap/**'
+      - 'scripts/**'
+      - 'patches/**'
+      - '.github/workflows/build-packages.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    name: Build pacman Packages, Verify & Publish
+    permissions:
+      contents: write
+
+    env:
+      OVL0AD3R_DOMAIN: ${{ vars.OVL0AD3R_DOMAIN }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Host Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build meson pkg-config \
+            zstd curl ca-certificates tar xz-utils \
+            libarchive-tools bsdtar patchelf \
+            autoconf automake libtool gettext libssl-dev \
+            python3
+
+      - name: Install repo-add
+        run: |
+          sudo apt-get install -y pacman-package-manager
+          command -v repo-add
+          repo-add --help > /dev/null
+
+      - name: Install libalpm for the verification gate
+        run: |
+          sudo apt-get install -y libalpm-dev
+          pkg-config --exists libalpm || \
+            { echo "::error::libalpm不可用,门禁将无法运行"; exit 1; }
+
+      - name: Setup Android NDK
+        run: |
+          NDK_ZIP=android-ndk-r26d-linux.zip
+          curl -fsSL -o "/tmp/$NDK_ZIP" \
+            "https://dl.google.com/android/repository/$NDK_ZIP"
+          sudo unzip -q "/tmp/$NDK_ZIP" -d /opt
+          sudo mv /opt/android-ndk-r26d /opt/android-ndk
+          echo "ANDROID_NDK_ROOT=/opt/android-ndk" >> "$GITHUB_ENV"
+
+      - name: Build Everything
+        run: |
+          ./scripts/build-all-tools.sh
+
+      - name: Verify Repository Is Usable
+        run: |
+          set -euo pipefail
+          ovp=$(find output/repo -maxdepth 1 -name '*.pkg.tar.zst' | wc -l)
+          idx=$(python3 -c "import json;print(json.load(open('output/repo/index.json'))['count'])")
+          echo "::notice::已构建$ovp个包,index.json收录$idx个"
+          [ "$ovp" -eq "$idx" ] || {
+            echo "::error::index.json($idx)与实际包数($ovp)不一致"
+            exit 1
+          }
+
+      - name: Prepare Publish Directory
+        run: |
+          chmod +x scripts/publish-repo.sh
+          ./scripts/publish-repo.sh "$GITHUB_WORKSPACE/_site" \
+            "${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}"
+
+      - name: Deploy to gh-pages
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          full_commit_message: 'chore: publish repository snapshot'
+
+      - name: Upload Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0vl0ad3r-repo
+          path: output/repo/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish Release Assets
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            output/repo/*.pkg.tar.zst
+            output/repo/index.json
+            output/repo/0vl0ad3r.db.tar.zst
+            output/repo/0vl0ad3r.files.tar.zst
+          fail_on_unmatched_files: true
+          generate_release_notes: true

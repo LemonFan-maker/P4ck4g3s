@@ -1,0 +1,12 @@
+diff --git a/include/openssl/opensslconf.h b/include/openssl/opensslconf.h
+index 4a8d78e..12d825a 100644
+--- a/include/openssl/opensslconf.h
++++ b/include/openssl/opensslconf.h
+@@ -12,6 +12,7 @@
+ #pragma once
+ 
+ #include <openssl/configuration.h>
++#include <openssl/opensslv.h>
+ #include <openssl/macros.h>
+ 
+ #endif /* OPENSSL_OPENSSLCONF_H */
