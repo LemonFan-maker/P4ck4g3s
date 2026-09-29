@@ -44,7 +44,10 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26d
+          # 钉在 r30: r26d 的 Bionic limits.h 不定义 LINE_MAX, pacman 的
+          # lib/libalpm/util.c 编译会失败(容器内用官方 clang + #error 探针复现)。
+          # 与 build-packages.yml 保持一致, 也与本地跑通全量构建的那一版一致。
+          ndk-version: r30
           add-to-path: true
 
       - name: Build Bootstrap Toolchain
