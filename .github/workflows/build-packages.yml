@@ -20,7 +20,12 @@ on:
       - 'manifest/**'
       - '.github/workflows/build-packages.yml'
   workflow_dispatch:
-
+  # 每天北京时间 09:00 重编并发布。GitHub Actions 的 cron 恒为 UTC,
+  # 北京 = UTC+8, 所以 09:00 对应 01:00 UTC。
+  # 目的不是"有代码改动才构建",而是接住上游 tarball 漂移: ncurses / nano 这类
+  # 上游会重新打包的 tarball,清单里钉死的 sha256 迟早与实际产物失配。
+  schedule:
+    - cron: '0 1 * * *'
 concurrency:
   group: build-packages-${{ github.ref }}
   cancel-in-progress: true
@@ -121,14 +126,13 @@ jobs:
           ./scripts/publish-repo.sh "$GITHUB_WORKSPACE/_site" \
             "${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}"
 
-      - name: Deploy to gh-pages
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload Pages Artifact
+        # 部署条件必须显式排除 pull_request: PR 事件下 github.ref 是 refs/pull/N/merge,
+        # 只判"不是 tag"会求值为真, 于是任意 PR 都能把未审代码发布到线上源。
+        if: ${{ github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          full_commit_message: 'chore: publish repository snapshot'
+          path: _site
 
       - name: Upload Workflow Artifact
         uses: actions/upload-artifact@v4
@@ -149,3 +153,26 @@ jobs:
             output/repo/0vl0ad3r.files.tar.zst
           fail_on_unmatched_files: true
           generate_release_notes: true
+
+  deploy:
+    needs: build
+    # 同上, 且这条会真正改写线上站点。
+    if: ${{ github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-24.04
+    name: Deploy to GitHub Pages
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # 部署必须串行: 取消上一次会留下一个已改写的发布但未激活的 Pages 构建。
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
