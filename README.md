@@ -8,7 +8,7 @@
 1. **Bionic依赖库交叉编译**:在Android NDK环境下构建zstd、openssl、libarchive、libcurl、ncurses等基础库。
 2. **pacman包管理器移植**:提供适用于ARM64 Bionic的原生pacman/libalpm及自举环境。
 3. **常用工具链打包**:维护curl、wget、aria2、nano、vim等工具的.pkg.tar.zst标准包。
-4. **自动化CI/CD与分发**:通过GitHub Actions全自动编译,生成软件源数据库(0vl0ad3r.db.tar.zst)与前端索引(index.json),发布到`gh-pages`分支。
+4. **自动化CI/CD与分发**:通过GitHub Actions全自动编译,生成软件源数据库(0vl0ad3r.db.tar.zst)与前端索引(index.json),再由`actions/deploy-pages`部署为GitHub Pages站点。
 
 ## 2.目录结构
 
@@ -61,9 +61,11 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 
 ## 5.分发与发布
 
-- **分支推送**:向`main`分支推送代码触发自动构建,产物发布至`gh-pages`分支。这是**唯一在用的软件源**,db与包作为同一次提交落下,始终自洽。
-- **版本发布**:推送`v*`标签时自动创建GitHub Release并附带所有软件包归档,作为可复现的**版本快照**。注意该步骤与上面的`gh-pages`部署互斥(前者仅在tag时触发,后者仅在非tag时触发),所以**首次打tag之前Releases是空的**。
-- **自定义域名**:已绑定<https://r3p0.orionisli.com>。DNS指向本仓库的`gh-pages`站点,与`*.github.io`同源同内容,换域名不必重新打包。在仓库Settings->Secrets and variables->Actions中配置`OVL0AD3R_DOMAIN`变量后,`publish-repo.sh`会自动写入`CNAME`并把该域名作为镜像源列表的首选地址。
+- **分支推送**:向`main`分支推送代码触发自动构建,产物经`actions/deploy-pages`部署到GitHub Pages站点。这是**唯一在用的软件源**,db与包作为同一棵目录树一次落下,始终自洽。
+- **定时构建**:每天北京时间09:00(UTC 01:00)自动重编并重新部署。目的是接住上游tarball漂移——ncurses/nano这类上游会重新打包的产物,清单里钉死的sha256迟早失配,与其等下一次无关构建撞上,不如每日主动重编一次。
+- **版本发布**:推送`v*`标签时自动创建GitHub Release并附带所有软件包归档,作为可复现的**版本快照**。注意该步骤与上面的站点部署互斥(前者仅在tag时触发,后者仅在非tag时触发),所以**首次打tag之前Releases是空的**。GitHub对tag推送不做`paths`过滤,所以tag必定能触发本workflow。
+- **自定义域名**:已绑定<https://r3p0.orionisli.com>。DNS指向本仓库的Pages站点,与`*.github.io`同源同内容,换域名不必重新打包。在仓库Settings->Secrets and variables->Actions中配置`OVL0AD3R_DOMAIN`变量后,`publish-repo.sh`会自动写入`CNAME`并把该域名作为镜像源列表的首选地址。
+  - 排查时请注意:站点内容由**最近一次`actions/deploy-pages`产物**决定,不是`gh-pages`分支。该分支自改用Actions部署后便不再更新,只作历史留存。**分支内容新、站点内容旧**曾经真实发生过,排查时先比对站点而不是分支。
 
 ### 目录布局
 

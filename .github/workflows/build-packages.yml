@@ -28,7 +28,12 @@ on:
     - cron: '0 1 * * *'
 concurrency:
   group: build-packages-${{ github.ref }}
-  cancel-in-progress: true
+  # 不能开 cancel-in-progress: run 级并发优先于 job 级, 会把正在部署的整个 run
+  # 掐掉。actions/deploy-pages 走 Pages deployment API, 中断会把 github-pages
+  # environment 卡在 in-progress, 之后每次部署都报 stale deployment, 只能去
+  # Settings->Pages 手工删掉卡住的 deployment 恢复。构建本身代价高, 取消也省不下
+  # 什么, 撞上每日 schedule 时多跑一次远比卡死划算。
+  cancel-in-progress: false
 
 jobs:
   build:
