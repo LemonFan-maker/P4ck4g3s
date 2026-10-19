@@ -61,11 +61,11 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 
 ## 5.分发与发布
 
-- **分支推送**:向`main`分支推送代码触发自动构建,产物经`actions/deploy-pages`部署到GitHub Pages站点。这是**唯一在用的软件源**,db与包作为同一棵目录树一次落下,始终自洽。
+- **分支推送**:向`master`分支(`main`同样触发)推送代码触发自动构建,产物经`actions/deploy-pages`部署到GitHub Pages站点。这是**唯一在用的软件源**,db与包作为同一棵目录树一次落下,始终自洽。
 - **定时构建**:每天北京时间09:00(UTC 01:00)自动重编并重新部署。目的是接住上游tarball漂移——ncurses/nano这类上游会重新打包的产物,清单里钉死的sha256迟早失配,与其等下一次无关构建撞上,不如每日主动重编一次。上游**版本**漂移在这条里只作告警(构件`refreshed-manifest`留一份上游现状的复核材料),不拦停本次重建:发布物始终来自仓库已提交的清单,版本升级由人审阅后提交。
 - **版本发布**:推送`v*`标签时自动创建GitHub Release并附带所有软件包归档,作为可复现的**版本快照**。注意该步骤与上面的站点部署互斥(前者仅在tag时触发,后者仅在非tag时触发),所以**首次打tag之前Releases是空的**。GitHub对tag推送不做`paths`过滤,所以tag必定能触发本workflow。
 - **自定义域名**:已绑定<https://r3p0.orionisli.com>。DNS指向本仓库的Pages站点,与`*.github.io`同源同内容,换域名不必重新打包。在仓库Settings->Secrets and variables->Actions中配置`OVL0AD3R_DOMAIN`变量后,`publish-repo.sh`会自动写入`CNAME`并把该域名作为镜像源列表的首选地址。
-  - 排查时请注意:站点内容由**最近一次`actions/deploy-pages`产物**决定,不是`gh-pages`分支。该分支自改用Actions部署后便不再更新,只作历史留存。**分支内容新、站点内容旧**曾经真实发生过,排查时先比对站点而不是分支。
+  - 排查时请注意:站点内容由**最近一次`actions/deploy-pages`产物**决定,仓库只有`master`一个分支,部署不写任何分支内容,历史遗留的`gh-pages`分支已删除。此前"分支内容新、站点内容旧"的分歧正是它造成的,现在不再有第二个副本可比,排查时直接比对站点。
 
 ### 目录布局
 

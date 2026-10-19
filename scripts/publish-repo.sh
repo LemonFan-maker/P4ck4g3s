@@ -27,7 +27,7 @@ if [[ ! -f "$BOOTSTRAP_SEED" ]]; then
     exit 1
 fi
 
-echo -e "\033[1;34m[*] 正在准备gh-pages发布目录:$DEST(${PKG_COUNT}个包)\033[0m"
+echo -e "\033[1;34m[*] 正在准备站点发布目录:$DEST(${PKG_COUNT}个包)\033[0m"
 
 rm -rf "$DEST"
 mkdir -p "$DEST"
@@ -46,7 +46,7 @@ if [[ -n "$CUSTOM_DOMAIN" ]]; then
     printf '%s\n' "$CUSTOM_DOMAIN" > "$DEST/CNAME"
     echo -e "\033[1;34m[*] 已写入CNAME:$CUSTOM_DOMAIN\033[0m"
 else
-    echo -e "\033[1;33m[-] 未设置OVL0AD3R_DOMAIN,不生成CNAME(gh-pages将使用默认*.github.io地址)\033[0m"
+    echo -e "\033[1;33m[-] 未设置OVL0AD3R_DOMAIN,不生成CNAME(站点将使用默认*.github.io地址)\033[0m"
 fi
 
 if [[ -n "$TAG" ]]; then
