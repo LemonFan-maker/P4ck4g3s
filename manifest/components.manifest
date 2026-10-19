@@ -2,17 +2,17 @@ pkgname,kind,source,repo,ref,tar,tar_url,tar_url_fallback,sha256,arch_pkg,versio
 zlib,lib,arch,https://github.com/madler/zlib.git,v1.3.2,,,,,zlib,1.3.2,Compression library implementing the deflate compression method found in gzip and PKZIP
 zstd,lib,arch,https://github.com/facebook/zstd.git,v1.5.7,,,,,zstd,1.5.7,Zstandard - Fast real-time compression algorithm
 xz,lib,arch,https://github.com/tukaani-project/xz.git,v5.8.4,,,,,xz,5.8.4,Library and command line tools for XZ and LZMA compressed files
-openssl,lib,arch,https://github.com/openssl/openssl.git,openssl-3.6.4,,,,,openssl,3.6.4,The Open Source toolkit for cryptography and Transport Layer Security
-libarchive,lib,arch,https://github.com/libarchive/libarchive.git,v3.8.9,,,,,libarchive,3.8.9,Multi-format archive and compression library
-libcurl,lib,arch,https://github.com/curl/curl.git,curl-8_22_0,,,,,curl,8.22.0,libcurl传输库HTTP/FTP/TLS
-curl,tool,arch,https://github.com/curl/curl.git,curl-8_22_0,,,,,curl,8.22.0,command line tool and library for transferring data with URLs
+openssl,lib,arch,https://github.com/openssl/openssl.git,openssl-3.6.5,,,,,openssl,3.6.5,The Open Source toolkit for cryptography and Transport Layer Security
+libarchive,lib,arch,https://github.com/libarchive/libarchive.git,v3.8.10,,,,,libarchive,3.8.10,Multi-format archive and compression library
+libcurl,lib,arch,https://github.com/curl/curl.git,curl-8_23_0,,,,,curl,8.23.0,libcurl传输库HTTP/FTP/TLS
+curl,tool,arch,https://github.com/curl/curl.git,curl-8_23_0,,,,,curl,8.23.0,command line tool and library for transferring data with URLs
 libc++,lib,derived,,,,,,,,21.0.0,LLVM libc++共享运行时库
 libalpm,lib,arch,https://gitlab.archlinux.org/pacman/pacman.git,v7.1.0,,,,,pacman,7.1.0,Arch Linux包管理器核心库libalpm
 pacman,tool,arch,https://gitlab.archlinux.org/pacman/pacman.git,v7.1.0,,,,,pacman,7.1.0,A library-based package manager with dependency support
 ncurses,tool,arch,,,ncurses-6.6.tar.gz,https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz,https://ftp.gnu.org/gnu/ncurses/ncurses-6.6.tar.gz,355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11,ncurses,6.6,System V Release 4.0 curses emulation library
 nano,tool,arch,,,nano-9.2.tar.xz,https://www.nano-editor.org/dist/v9/nano-9.2.tar.xz,https://ftp.gnu.org/gnu/nano/nano-9.2.tar.xz,05ecb99247b782e8a5b3a25ed4101dd034b0236902f7449bc9795b717642f7e9,nano,9.2,Pico editor clone with enhancements
-vim,tool,arch,https://github.com/vim/vim.git,v9.2.1046,,,,,vim,9.2.1046,"Vi Improved, a highly configurable, improved version of the vi text editor"
-vi,tool,arch,,,,,,,,9.2.1046,Vi文本编辑器接口
+vim,tool,arch,https://github.com/vim/vim.git,v9.2.1178,,,,,vim,9.2.1178,"Vi Improved, a highly configurable, improved version of the vi text editor"
+vi,tool,arch,,,,,,,,9.2.1178,Vi文本编辑器接口
 wget,tool,arch,,,wget-1.25.0.tar.gz,https://ftp.gnu.org/gnu/wget/wget-1.25.0.tar.gz,https://mirrors.kernel.org/gnu/wget/wget-1.25.0.tar.gz,766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784,wget,1.25.0,Network utility to retrieve files from the web
 aria2,tool,arch,https://github.com/aria2/aria2.git,release-1.37.0,,,,,aria2,1.37.0,"Download utility that supports HTTP(S), FTP, BitTorrent, and Metalink"
 ca-certificates,data,pin,,,cacert-2024-09-24.pem,https://curl.se/ca/cacert-2024-09-24.pem,,189d3cf6d103185fba06d76c1af915263c6d42225481a1759e853b33ac857540,ca-certificates,2024.09.24,Common CA certificates - default providers
