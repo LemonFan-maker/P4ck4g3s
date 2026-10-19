@@ -81,21 +81,36 @@ jobs:
           /tmp/alpm-probe
 
       - name: Check Manifest Matches Arch Upstream
+        id: manifest_check
+        # 推送/PR: 版本漂移必须硬失败(README §3.5: 清单漂移在CI构建前即失败),
+        # 由人审阅后主动升级版本并提交。
+        # 定时构建: 版本漂移不再拦停本次重建。上游每次发版都会让这道门失败,
+        # 若在定时构建里也硬失败,整条每日重建会先死在版本门上,而它的职责是
+        # 接住上游 tarball 漂移(下载时sha256失配)——那道检查在版本门之后,
+        # 版本门先死就永远轮不到它。定时构建因此只在告警里留痕,继续按仓库
+        # 提交的清单重建发布;版本升级仍然走人审阅。
+        continue-on-error: ${{ github.event_name == 'schedule' }}
         run: |
           ./scripts/sync-archlinux.py --check
 
       - name: Refresh Manifest
-        if: failure()
+        # 漂移时留一份"上游现在是什么版本"的人工复核材料。写到仓库外的临时
+        # 路径: 发布的包必须与仓库提交的清单一一对应(README §3.5 版本单一
+        # 来源),刷新结果不能流进构建。
+        if: always() && steps.manifest_check.outcome == 'failure'
         continue-on-error: true
-        run: ./scripts/sync-archlinux.py
+        run: |
+          echo "::warning::组件清单与Arch上游不一致;本次构建仍按仓库提交的清单发布,版本升级需人审阅后提交"
+          ./scripts/sync-archlinux.py --output "$RUNNER_TEMP/components.manifest"
 
       - name: Upload Refreshed Manifest Diff
-        if: failure()
+        if: always() && steps.manifest_check.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: refreshed-manifest
-          path: manifest/components.manifest
+          path: ${{ runner.temp }}/components.manifest
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Setup Android NDK
         run: |

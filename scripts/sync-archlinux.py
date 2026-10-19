@@ -209,6 +209,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="只校验,不写文件")
     parser.add_argument("--print", dest="show", action="store_true", help="打到标准输出")
+    parser.add_argument("--output", help="把结果写到指定路径而不改仓库里的清单;"
+                                        "CI用它留一份人工复核材料,不让刷新结果流进构建")
     args = parser.parse_args()
 
     rows, problems = build_rows()
@@ -229,6 +231,13 @@ def main():
             print(f"[-] {MANIFEST.relative_to(REPO_ROOT)}与Arch上游不一致,请运行./scripts/sync-archlinux.py", file=sys.stderr)
             return 1
         print(f"[+] 组件清单与上游一致({summarize(rows)})")
+        return 0
+
+    if args.output:
+        target = Path(args.output).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        print(f"[+] 已写入{target}({summarize(rows)});仓库清单未改动")
         return 0
 
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)

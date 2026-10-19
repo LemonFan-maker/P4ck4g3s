@@ -14,6 +14,14 @@
   ./scripts/sync-archlinux.py --check
   ```
 
+  推送与PR上失败即拦停;每日定时构建里只告警并继续按已提交的清单重建(见仓库README §3.5),漂移材料以构件`refreshed-manifest`留存待人复核。
+
+- 复核材料可以写到仓库外的路径,不动已提交的清单:
+
+  ```bash
+  ./scripts/sync-archlinux.py --output /tmp/components.manifest
+  ```
+
 ## 字段
 
 | 字段 | 含义 |
