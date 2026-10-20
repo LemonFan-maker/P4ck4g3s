@@ -1,0 +1,17 @@
+--- a/lib/libalpm/util.c
++++ b/lib/libalpm/util.c
+@@ -1487,7 +1487,13 @@
+ 	int ret = 0;
+ 
+ 	int flag = 0;
+-#ifdef AT_SYMLINK_NOFOLLOW
++/*
++ * Bionic's faccessat() rejects any flags with EINVAL.  Passing
++ * AT_SYMLINK_NOFOLLOW therefore makes every package look unreadable and
++ * pacman fails with "cannot open package file" before libarchive is even
++ * reached.  Android does not need the no-follow distinction here.
++ */
++#if defined(AT_SYMLINK_NOFOLLOW) && !defined(__ANDROID__)
+ 	flag |= AT_SYMLINK_NOFOLLOW;
+ #endif
+ 
