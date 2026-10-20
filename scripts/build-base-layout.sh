@@ -7,6 +7,8 @@ source "$SCRIPT_DIR/manifest.sh"
 source "$SCRIPT_DIR/ca-bundle.sh"
 
 BASE_LAYOUT_VER="$(manifest_require_version base-layout)"
+# pkgver 跟随语义版本; 只改打包内容(配置文件、目录布局)时递增 pkgrel。
+BASE_LAYOUT_REL="2"
 STAGING_DIR="$BUILD_DIR/staging_base_layout"
 
 if [[ -n "${OVL0AD3R_MIRROR:-}" ]]; then
@@ -71,8 +73,11 @@ HookDir = /system/0vl0ad3r/etc/pacman.d/hooks/
 HoldPkg = pacman base-layout
 Architecture = aarch64
 
+# 本底座的 pacman 以 -Dgpgme=disabled 编译, 没有签名能力。
+# 这里必须写 Never; Optional/Required 会让 pacman 报
+# "SigLevel option invalid, no signature support" 并拒绝启动。
 SigLevel = Never
-LocalFileSigLevel = Optional
+LocalFileSigLevel = Never
 
 Color
 CheckSpace
@@ -82,6 +87,8 @@ ILoveCandy
 [0vl0ad3r]
 Include = /system/0vl0ad3r/etc/pacman.d/mirrorlist
 EOF
+
+check_pacman_conf_has_no_signature_requirements "$STAGING_DIR/etc/pacman.conf"
 
 cat <<EOF > "$STAGING_DIR/etc/pacman.d/mirrorlist"
 Server = $MIRROR_PRIMARY
@@ -98,7 +105,7 @@ EOF
     "$STAGING_DIR" \
     "base-layout" \
     "$BASE_LAYOUT_VER" \
-    "1" \
+    "$BASE_LAYOUT_REL" \
     "$(manifest_desc base-layout)" \
     "https://github.com/LemonFan-maker/P4ck4g3s" \
     "Apache-2.0"

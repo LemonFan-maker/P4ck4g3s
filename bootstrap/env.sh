@@ -212,6 +212,15 @@ git_clone_latest() {
     fi
 }
 
+check_pacman_conf_has_no_signature_requirements() {
+    local conf="$1"
+    if grep -Eq '^[[:space:]]*(SigLevel|LocalFileSigLevel|RemoteFileSigLevel)[[:space:]]*=.*(Optional|Required)' "$conf"; then
+        log_error "pacman 以 -Dgpgme=disabled 编译, 配置不能启用签名校验: $conf"
+        log_error "请把 SigLevel / LocalFileSigLevel 设为 Never"
+        return 1
+    fi
+}
+
 apply_patches() {
     local component="$1"
     local target_dir="$2"

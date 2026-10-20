@@ -44,8 +44,11 @@ HookDir = /system/0vl0ad3r/etc/pacman.d/hooks/
 HoldPkg = pacman base-layout
 Architecture = aarch64
 
+# 本底座的 pacman 以 -Dgpgme=disabled 编译, 没有签名能力。
+# 这里必须写 Never; Optional/Required 会让 pacman 报
+# "SigLevel option invalid, no signature support" 并拒绝启动。
 SigLevel = Never
-LocalFileSigLevel = Optional
+LocalFileSigLevel = Never
 
 Color
 CheckSpace
@@ -55,6 +58,8 @@ ILoveCandy
 [0vl0ad3r]
 Include = /system/0vl0ad3r/etc/pacman.d/mirrorlist
 EOF
+
+check_pacman_conf_has_no_signature_requirements "$STAGE_DIR/etc/pacman.conf"
 
 cat <<'EOF' > "$STAGE_DIR/etc/pacman.d/mirrorlist"
 Server = https://r3p0.orionisli.com
