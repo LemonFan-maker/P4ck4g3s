@@ -128,6 +128,19 @@ jobs:
         run: |
           ./scripts/build-all-tools.sh
 
+      - name: Upload Bootstrap Seed
+        # 这里产出的就是 build-all-tools.sh 末尾装配的同一份种子, 不再由
+        # 单独的 bootstrap workflow 重编一遍工具链。
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0vl0ad3r-bootstrap-aarch64
+          path: |
+            output/bootstrap/*.tar.zst
+            output/bootstrap/bin/*
+            output/bootstrap/lib64/*
+            output/bootstrap/etc/*
+          if-no-files-found: error
+
       - name: Verify Repository Is Usable
         run: |
           set -euo pipefail

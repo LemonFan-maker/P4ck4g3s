@@ -1,22 +1,9 @@
 name: Build Bootstrap Toolchain
 
 on:
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'bootstrap/**'
-      - 'scripts/**'
-      - 'manifest/**'
-      - 'patches/**'
-      - '.github/workflows/build-bootstrap.yml'
-  pull_request:
-    branches: [ main, master ]
-    paths:
-      - 'bootstrap/**'
-      - 'scripts/**'
-      - 'manifest/**'
-      - 'patches/**'
-      - '.github/workflows/build-bootstrap.yml'
+  # 只保留手动触发: 推送时由 build-packages.yml 在同一份 workspace 里
+  # 先编工具链再打包, 避免两个 workflow 各编一遍 bootstrap。需要只验证
+  # 底座时, 从 Actions 里手动运行本 workflow。
   workflow_dispatch:
 
 jobs:
