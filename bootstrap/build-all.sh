@@ -15,6 +15,9 @@ SECONDS=0
 "$SCRIPT_DIR/build-curl.sh"
 "$SCRIPT_DIR/build-archive.sh"
 "$SCRIPT_DIR/build-pacman.sh"
+
+"$REPO_ROOT/scripts/build-base-layout.sh"
+
 "$SCRIPT_DIR/package-bootstrap.sh"
 
 ELAPSED=$SECONDS

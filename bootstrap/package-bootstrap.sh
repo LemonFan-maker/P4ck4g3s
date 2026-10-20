@@ -6,6 +6,7 @@ source "$SCRIPT_DIR/env.sh"
 STAGE_DIR="$BUILD_DIR/bootstrap_stage"
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/bin" "$STAGE_DIR/lib64" "$STAGE_DIR/etc/pacman.d" "$STAGE_DIR/etc/ssl/certs"
+mkdir -p "$STAGE_DIR/etc/pacman.d/gnupg" "$STAGE_DIR/etc/pacman.d/hooks"
 mkdir -p "$STAGE_DIR/var/lib/pacman/local" "$STAGE_DIR/var/cache/pacman/pkg" "$STAGE_DIR/var/log"
 mkdir -p "$STAGE_DIR/tmp" "$STAGE_DIR/share"
 
@@ -51,13 +52,12 @@ CheckSpace
 VerbosePkgLists
 ILoveCandy
 
-[0vl0ad3r-core]
+[0vl0ad3r]
 Include = /system/0vl0ad3r/etc/pacman.d/mirrorlist
 EOF
 
 cat <<'EOF' > "$STAGE_DIR/etc/pacman.d/mirrorlist"
 Server = https://r3p0.orionisli.com
-Server = https://github.com/LemonFan-maker/P4ck4g3s/releases/latest/download
 EOF
 
 cat <<'EOF' > "$STAGE_DIR/bin/0vl"
@@ -89,6 +89,30 @@ if [ -d "/system/0vl0ad3r/bin" ]; then
     export LD_LIBRARY_PATH="/system/0vl0ad3r/lib64:$LD_LIBRARY_PATH"
 fi
 EOF
+chmod 644 "$STAGE_DIR/etc/0vl0ad3r.env"
+
+BASE_LAYOUT_PKG="$(ls -1 "$REPO_ROOT"/output/repo/base-layout-*.pkg.tar.zst 2>/dev/null | sort | tail -n 1 || true)"
+if [[ -z "$BASE_LAYOUT_PKG" ]]; then
+    log_error "未找到base-layout包,自举归档缺少本地库条目与HTTPS信任锚"
+    log_error "请先执行./scripts/build-base-layout.sh"
+    exit 1
+fi
+
+log_info "正在登记base-layout到pacman本地库:$(basename "$BASE_LAYOUT_PKG")"
+"$REPO_ROOT/scripts/make-local-db-entry.sh" \
+    "$BASE_LAYOUT_PKG" "$STAGE_DIR/var/lib/pacman/local"
+
+install -d -m 755 "$STAGE_DIR/etc/ssl"
+if ! bsdtar -xOf "$BASE_LAYOUT_PKG" etc/ssl/bootstrap-ca.pem \
+    > "$STAGE_DIR/etc/ssl/bootstrap-ca.pem"; then
+    log_error "base-layout包内缺少etc/ssl/bootstrap-ca.pem"
+    exit 1
+fi
+if [[ ! -s "$STAGE_DIR/etc/ssl/bootstrap-ca.pem" ]]; then
+    log_error "base-layout包内的CA信任锚为空:etc/ssl/bootstrap-ca.pem"
+    exit 1
+fi
+chmod 644 "$STAGE_DIR/etc/ssl/bootstrap-ca.pem"
 
 log_info "正在生成whiteout底座清单文件..."
 cd "$STAGE_DIR"

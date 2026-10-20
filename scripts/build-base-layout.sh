@@ -4,6 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$REPO_ROOT/bootstrap/env.sh"
 source "$SCRIPT_DIR/manifest.sh"
+source "$SCRIPT_DIR/ca-bundle.sh"
 
 BASE_LAYOUT_VER="$(manifest_require_version base-layout)"
 STAGING_DIR="$BUILD_DIR/staging_base_layout"
@@ -24,12 +25,17 @@ mkdir -p "$STAGING_DIR"
 install -d -m 755 "$STAGING_DIR/bin"
 install -d -m 755 "$STAGING_DIR/lib64"
 install -d -m 755 "$STAGING_DIR/etc/pacman.d"
+install -d -m 755 "$STAGING_DIR/etc/pacman.d/gnupg"
+install -d -m 755 "$STAGING_DIR/etc/pacman.d/hooks"
 install -d -m 755 "$STAGING_DIR/etc/ssl/certs"
 install -d -m 755 "$STAGING_DIR/share"
 install -d -m 755 "$STAGING_DIR/var/lib/pacman/local"
 install -d -m 755 "$STAGING_DIR/var/cache/pacman/pkg"
 install -d -m 755 "$STAGING_DIR/var/log"
 install -d -m 1777 "$STAGING_DIR/tmp"
+
+ensure_ca_bundle
+install -m 644 "$CA_BUNDLE_PATH" "$STAGING_DIR/etc/ssl/bootstrap-ca.pem"
 
 cat <<'EOF' > "$STAGING_DIR/bin/0vl"
 #!/system/bin/sh
@@ -73,13 +79,12 @@ CheckSpace
 VerbosePkgLists
 ILoveCandy
 
-[0vl0ad3r-core]
+[0vl0ad3r]
 Include = /system/0vl0ad3r/etc/pacman.d/mirrorlist
 EOF
 
 cat <<EOF > "$STAGING_DIR/etc/pacman.d/mirrorlist"
 Server = $MIRROR_PRIMARY
-Server = https://github.com/LemonFan-maker/P4ck4g3s/releases/latest/download
 EOF
 
 cat <<'EOF' > "$STAGING_DIR/etc/0vl0ad3r.env"
