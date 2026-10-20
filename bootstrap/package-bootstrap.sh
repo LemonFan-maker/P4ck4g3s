@@ -96,16 +96,31 @@ fi
 EOF
 chmod 644 "$STAGE_DIR/etc/0vl0ad3r.env"
 
-BASE_LAYOUT_PKG="$(ls -1 "$REPO_ROOT"/output/repo/base-layout-*.pkg.tar.zst 2>/dev/null | sort | tail -n 1 || true)"
+find_repo_pkg() {
+    find "$REPO_ROOT/output/repo" -maxdepth 1 -name "$1-*.pkg.tar.zst" -print -quit 2>/dev/null
+}
+
+BASE_LAYOUT_PKG="$(find_repo_pkg base-layout)"
 if [[ -z "$BASE_LAYOUT_PKG" ]]; then
     log_error "未找到base-layout包,自举归档缺少本地库条目与HTTPS信任锚"
     log_error "请先执行./scripts/build-base-layout.sh"
     exit 1
 fi
 
-log_info "正在登记base-layout到pacman本地库:$(basename "$BASE_LAYOUT_PKG")"
-"$REPO_ROOT/scripts/make-local-db-entry.sh" \
-    "$BASE_LAYOUT_PKG" "$STAGE_DIR/var/lib/pacman/local"
+# 这些包的文件已经完整包含在 seed 里。逐个写本地库条目, 让 `pacman -Q`
+# 如实反映底座内容, GUI 也不会把系统库当成可单独安装的普通包。
+# curl 包还带 headers/curl-config, seed 里只有 bin/curl, 故不登记。
+LOCAL_PACKAGES=(base-layout pacman libalpm libarchive libcurl openssl zlib zstd xz)
+for pkg_name in "${LOCAL_PACKAGES[@]}"; do
+    pkg_file="$(find_repo_pkg "$pkg_name")"
+    if [[ -z "$pkg_file" ]]; then
+        log_error "未找到${pkg_name}包,无法登记自举本地库"
+        exit 1
+    fi
+    log_info "正在登记${pkg_name}到pacman本地库:$(basename "$pkg_file")"
+    "$REPO_ROOT/scripts/make-local-db-entry.sh" \
+        "$pkg_file" "$STAGE_DIR/var/lib/pacman/local"
+done
 
 install -d -m 755 "$STAGE_DIR/etc/ssl"
 if ! bsdtar -xOf "$BASE_LAYOUT_PKG" etc/ssl/bootstrap-ca.pem \
