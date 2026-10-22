@@ -20,10 +20,6 @@ on:
       - 'manifest/**'
       - '.github/workflows/build-packages.yml'
   workflow_dispatch:
-  # 每天北京时间 09:00 重编并发布。GitHub Actions 的 cron 恒为 UTC,
-  # 北京 = UTC+8, 所以 09:00 对应 01:00 UTC。
-  # 目的不是"有代码改动才构建",而是接住上游 tarball 漂移: ncurses / nano 这类
-  # 上游会重新打包的 tarball,清单里钉死的 sha256 迟早与实际产物失配。
   schedule:
     - cron: '0 1 * * *'
 concurrency:
