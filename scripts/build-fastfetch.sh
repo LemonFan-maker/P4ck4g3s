@@ -9,6 +9,8 @@ SRC_DIR="$BUILD_DIR/fastfetch"
 CMAKE_BUILD_DIR="$BUILD_DIR/fastfetch-build"
 STAGING_DIR="$BUILD_DIR/staging_fastfetch"
 DEST_DIR="$BUILD_DIR/dest_fastfetch"
+# pkgrel 2: avoid Android's private libmedia/libandroidicu linker namespace.
+FASTFETCH_PKGREL="2"
 
 if [[ ! -f "$SYSROOT/lib64/libz.so" && ! -f "$SYSROOT/lib/libz.so" ]]; then
     log_info "检测到依赖库zlib缺失,正在前置构建zlib..."
@@ -82,7 +84,7 @@ cp -a "$DEST_DIR$TARGET_PREFIX"/* "$STAGING_DIR/"
     "$STAGING_DIR" \
     "fastfetch" \
     "$CURRENT_VER" \
-    "1" \
+    "$FASTFETCH_PKGREL" \
     "$(manifest_desc fastfetch)" \
     "https://github.com/fastfetch-cli/fastfetch" \
     "MIT" \

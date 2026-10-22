@@ -57,6 +57,8 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 
 `bash`、`zsh`、`fish`均提供交互式Bionic移植。`zsh`包额外内置`zsh-syntax-highlighting`与`zsh-autosuggestions`,在`/system/0vl0ad3r/share/zsh/plugins`下随包分发;`fish`自带补全与语法高亮;`bash`保留基础补全,需要更完整的补全可后续增加`bash-completion`数据包。
 
+`fastfetch`的Android后端不再链接`libmediandk`/`libcamera2ndk`/`libjnigraphics`。这几个系统库会把`libmedia.so`拉进来,而它依赖普通应用命名空间不可见的`libandroidicu.so`;因此媒体、相机和编解码模块改为no-support桩,其余系统信息检测正常。
+
 ### 软件包门禁校验
 ```bash
 ./scripts/verify-packages.sh
