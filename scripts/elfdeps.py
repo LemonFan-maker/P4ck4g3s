@@ -21,7 +21,10 @@ NEEDED_LINE = re.compile(r"\(NEEDED\)[^\[]*\[([^\]]+)\]")
 SONAME = re.compile(r"^lib.+\.so(\.\d+)*$")
 READELF_ENV = {**os.environ, "LC_ALL": "C", "LANG": "C"}
 
-SYSTEM_LIBS = frozenset({"libc.so", "libdl.so", "libm.so"})
+SYSTEM_LIBS = frozenset({
+    "libc.so", "libdl.so", "libm.so",
+    "libjnigraphics.so", "libmediandk.so", "libcamera2ndk.so",
+})
 
 
 def _elf_needed(blob: bytes) -> set[str]:

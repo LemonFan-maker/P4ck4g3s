@@ -7,8 +7,10 @@
 本项目是0vl0ad3r的软件包构建中心与软件源,负责:
 1. **Bionic依赖库交叉编译**:在Android NDK环境下构建zstd、openssl、libarchive、libcurl、ncurses等基础库。
 2. **pacman包管理器移植**:提供适用于ARM64 Bionic的原生pacman/libalpm及自举环境。
-3. **常用工具链打包**:维护curl、wget、aria2、nano、vim等工具的.pkg.tar.zst标准包。
+3. **常用工具链打包**:维护curl、wget、aria2、nano、vim、bash、zsh、fish、fastfetch、lm_sensors等工具的.pkg.tar.zst标准包。
 4. **自动化CI/CD与分发**:通过GitHub Actions全自动编译,生成软件源数据库(0vl0ad3r.db.tar.zst)与前端索引(index.json),再由`actions/deploy-pages`部署为GitHub Pages站点。
+
+配套的Flutter终端APK位于同级目录`PD2339FA-terminal`;它直接调用本仓库提供的`/system/0vl0ad3r/bin/0vl`、shell与pacman包。
 
 ## 2.目录结构
 
@@ -35,7 +37,8 @@ P4ck4g3s/
 ### 环境要求
 - Ubuntu 22.04+或Arch Linux宿主机
 - Android NDK r30(钉在`manifest/components.manifest`的ndk行,通过环境变量`ANDROID_NDK_ROOT`指定)
-- 宿主工具:cmake,ninja,meson,zstd,patchelf,libalpm-dev
+- 宿主工具:cmake,ninja,meson,zstd,patchelf,libalpm-dev,autoconf,automake,libtool,gettext,bison,flex
+- Rust 1.85+ 与 `aarch64-linux-android` target
 
 ### 一键全量构建
 ```bash
@@ -46,9 +49,13 @@ export ANDROID_NDK_ROOT=/opt/android-ndk
 - 编译底层基础库(zlib,zstd,xz,openssl,libcurl,libarchive,ncurses,pacman)
 - 切分底层动态库包
 - 构建base-layout与ca-certificates
-- 打包pacman自举包与常用工具集(curl,wget,aria2,nano,vim,vi)
+- 打包pacman自举包与常用工具集(curl,wget,aria2,nano,vim,vi,bash,zsh,fish,lm_sensors,fastfetch)
 - 更新仓库数据库索引并运行完整性门禁
 - 装配客户端引导镜像(output/bootstrap/0vl0ad3r-bootstrap-aarch64.tar.zst)
+
+`lm_sensors`包只包含`sensors`、`libsensors`、头文件与默认配置;`sensors-detect`、`fancontrol`、`sensord`等Perl或systemd脚本不在包内,因为底座没有perl,装了也无法运行。
+
+`bash`、`zsh`、`fish`均提供交互式Bionic移植。`zsh`包额外内置`zsh-syntax-highlighting`与`zsh-autosuggestions`,在`/system/0vl0ad3r/share/zsh/plugins`下随包分发;`fish`自带补全与语法高亮;`bash`保留基础补全,需要更完整的补全可后续增加`bash-completion`数据包。
 
 ### 软件包门禁校验
 ```bash

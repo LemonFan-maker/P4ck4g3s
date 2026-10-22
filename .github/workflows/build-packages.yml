@@ -57,13 +57,25 @@ jobs:
             zstd curl ca-certificates tar xz-utils unzip \
             libarchive-tools libarchive-dev patchelf \
             autoconf automake libtool gettext libssl-dev \
+            bison flex \
             python3
-          # autopoint 必须显式装: 它是独立包, gettext 不带、autoconf 也不 Recommends,
-          # 而 aria2 的 git 树没有预生成 configure, autoreconf -fi 要靠它。
-          # GitHub runner 镜像恰好预装了它, 掩盖了这个依赖 —— 换 runner 或在干净的
-          # ubuntu 容器里构建就会在 aria2 上炸, 所以不能靠镜像的偶然内容。
           sudo apt-get install -y autopoint
           command -v autopoint
+
+      - name: Install Rust Target
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          if command -v rustup >/dev/null 2>&1; then
+            RUSTUP=rustup
+          else
+            RUSTUP="$HOME/.cargo/bin/rustup"
+          fi
+          "$RUSTUP" target add aarch64-linux-android
+          "$RUSTUP" target list --installed | grep -qx aarch64-linux-android
 
       - name: Install repo-add
         run: |
@@ -82,21 +94,11 @@ jobs:
 
       - name: Check Manifest Matches Arch Upstream
         id: manifest_check
-        # 推送/PR: 版本漂移必须硬失败(README §3.5: 清单漂移在CI构建前即失败),
-        # 由人审阅后主动升级版本并提交。
-        # 定时构建: 版本漂移不再拦停本次重建。上游每次发版都会让这道门失败,
-        # 若在定时构建里也硬失败,整条每日重建会先死在版本门上,而它的职责是
-        # 接住上游 tarball 漂移(下载时sha256失配)——那道检查在版本门之后,
-        # 版本门先死就永远轮不到它。定时构建因此只在告警里留痕,继续按仓库
-        # 提交的清单重建发布;版本升级仍然走人审阅。
         continue-on-error: ${{ github.event_name == 'schedule' }}
         run: |
           ./scripts/sync-archlinux.py --check
 
       - name: Refresh Manifest
-        # 漂移时留一份"上游现在是什么版本"的人工复核材料。写到仓库外的临时
-        # 路径: 发布的包必须与仓库提交的清单一一对应(README §3.5 版本单一
-        # 来源),刷新结果不能流进构建。
         if: always() && steps.manifest_check.outcome == 'failure'
         continue-on-error: true
         run: |
@@ -129,8 +131,6 @@ jobs:
           ./scripts/build-all-tools.sh
 
       - name: Upload Bootstrap Seed
-        # 这里产出的就是 build-all-tools.sh 末尾装配的同一份种子, 不再由
-        # 单独的 bootstrap workflow 重编一遍工具链。
         uses: actions/upload-artifact@v4
         with:
           name: 0vl0ad3r-bootstrap-aarch64
@@ -160,8 +160,6 @@ jobs:
             "${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}"
 
       - name: Upload Pages Artifact
-        # 部署条件必须显式排除 pull_request: PR 事件下 github.ref 是 refs/pull/N/merge,
-        # 只判"不是 tag"会求值为真, 于是任意 PR 都能把未审代码发布到线上源。
         if: ${{ github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-pages-artifact@v3
         with:
@@ -189,7 +187,6 @@ jobs:
 
   deploy:
     needs: build
-    # 同上, 且这条会真正改写线上站点。
     if: ${{ github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-24.04
     name: Deploy to GitHub Pages
@@ -199,7 +196,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # 部署必须串行: 取消上一次会留下一个已改写的发布但未激活的 Pages 构建。
     concurrency:
       group: github-pages
       cancel-in-progress: false
@@ -207,5 +203,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-
-

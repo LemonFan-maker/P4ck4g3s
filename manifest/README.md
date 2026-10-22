@@ -65,13 +65,21 @@
 
 走git的组件(`zlib` / `curl` / `pacman` / `vim` / `aria2`等)`tar`列为空,不需要sha256:它们的完整性由git的内容寻址加清单里钉住的`ref`保证,是另一套机制。
 
-现有四个tarball钉值的来源(不是"本地算一个数就填上"):
+### shell组件的额外钉值
+
+- `bash`的清单版本是`5.3.20`这种patchlevel,但上游基础tarball始终是`bash-5.3.tar.gz`;基础版本由`sync-archlinux.py`的`basever`模板推导,`patches/bash/`里的GNU官方补丁按`patch -p0`顺序应用,构建脚本会从`patchlevel.h`复核最终patchlevel。
+- `zsh`包额外内置`zsh-syntax-highlighting 0.8.0`与`zsh-autosuggestions v0.7.1`,tag钉在`scripts/build-zsh.sh`;它们不是manifest版本源,因为不单独发布包。
+- `fish` 4.x是Rust重写,CI需要Rust 1.85+和`aarch64-linux-android` target;`patches/fish/`只包含Bionic兼容补丁。
+
+现有tarball钉值的来源(不是"本地算一个数就填上"):
 
 | 包 | 证据 |
 |---|---|
 | `nano` | 与Arch `sha256sums[0]`逐字节相同 |
 | `ncurses` | Arch从git snapshot tag构建,**无哈希可抄**;由invisible-mirror.net(上游作者站)与ftp.gnu.org各下载一次比对 |
 | `wget` | Arch钉的是`.tar.lz`,与本仓库的`.tar.gz`**不是同一份产物**;由ftp.gnu.org与mirrors.kernel.org各下载一次比对 |
+| `bash` | GNU官方`bash-5.3.tar.gz`基础tarball;patchlevel补丁随仓库放在`patches/bash/`,清单的sha256对应基础tarball |
+| `zsh` | 与Arch source同一`zsh-5.9.2.tar.xz`;Arch用sha512,本仓库记录其sha256 |
 | `ca-certificates` | 原`build-ca-certificates.sh`已钉的值 |
 
 镜像之间可能互为拷贝,所以"两个host一致"是**必要不充分**的证据。真要彻底确认得验上游detached signature(`.sig` / `.asc`),那需要引入GPG与密钥环,目前没做。

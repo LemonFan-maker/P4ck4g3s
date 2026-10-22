@@ -43,6 +43,13 @@ COMPONENTS = [
     dict(pkg="wget", kind="tool", arch="wget", ref=None, url=None, desc=None,
          sha256={"1.25.0": "766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784"}),
     dict(pkg="aria2", kind="tool", arch="aria2", ref="release-{ver}", url=None, desc=None),
+    dict(pkg="bash", kind="tool", arch="bash", ref=None, url=None, desc=None,
+         sha256={"5.3.20": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"}),
+    dict(pkg="zsh", kind="tool", arch="zsh", ref=None, url=None, desc=None,
+         sha256={"5.9.2": "36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81"}),
+    dict(pkg="fish", kind="tool", arch="fish", ref="{ver}", url=None, desc=None),
+    dict(pkg="fastfetch", kind="tool", arch="fastfetch", ref="{ver}", url=None, desc=None),
+    dict(pkg="lm_sensors", kind="tool", arch="lm_sensors", ref="V{ver_dashed}", url=None, desc=None),
     dict(pkg="ca-certificates", kind="data", source="pin", version="2024.09.24",
          sha256="189d3cf6d103185fba06d76c1af915263c6d42225481a1759e853b33ac857540",
          arch="ca-certificates", ref=None, url=None, desc=None),
@@ -64,6 +71,9 @@ REPOS = {
     "pacman": "https://gitlab.archlinux.org/pacman/pacman.git",
     "vim": "https://github.com/vim/vim.git",
     "aria2": "https://github.com/aria2/aria2.git",
+    "fish": "https://github.com/fish-shell/fish-shell.git",
+    "fastfetch": "https://github.com/fastfetch-cli/fastfetch.git",
+    "lm_sensors": "https://github.com/lm-sensors/lm-sensors.git",
 }
 
 TARBALLS = {
@@ -76,6 +86,12 @@ TARBALLS = {
     "wget": ("wget-{ver}.tar.gz",
              "https://ftp.gnu.org/gnu/wget/wget-{ver}.tar.gz",
              "https://mirrors.kernel.org/gnu/wget/wget-{ver}.tar.gz"),
+    "bash": ("bash-{basever}.tar.gz",
+             "https://ftp.gnu.org/gnu/bash/bash-{basever}.tar.gz",
+             None),
+    "zsh": ("zsh-{ver}.tar.xz",
+            "https://www.zsh.org/pub/zsh-{ver}.tar.xz",
+            "https://sourceforge.net/projects/zsh/files/zsh/{ver}/zsh-{ver}.tar.xz/download"),
     "ca-certificates": ("cacert-{ver_dashed}.pem",
                         "https://curl.se/ca/cacert-{ver_dashed}.pem",
                         None),
@@ -118,6 +134,7 @@ def derive_ref(component, version):
     parts = version.split(".")
     fields = dict(ver=version, maj=parts[0],
                   ver_dashed="-".join(parts),
+                  basever=".".join(parts[:2]) if base == "bash" and len(parts) >= 3 else version,
                   ver_curl="_".join(parts) if base == "curl" else "")
 
     if base in TARBALLS:

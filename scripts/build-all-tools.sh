@@ -6,7 +6,7 @@ source "$REPO_ROOT/bootstrap/env.sh"
 
 log_info "开始执行0vl0ad3r常用工具链全量构建流程"
 log_info "目标平台:Android API ${ANDROID_API}(aarch64)"
-log_info "目标组件:ncurses, curl, wget, aria2, nano, vim, vi"
+log_info "目标组件:ncurses, curl, wget, aria2, nano, vim, vi, bash, zsh, fish, lm_sensors, fastfetch"
 
 SECONDS=0
 
@@ -30,13 +30,18 @@ log_info ">>> [阶段3/6] 正在构建基础布局与证书链(base-layout, ca-c
 log_info ">>> [阶段4/6] 正在封装pacman自举包..."
 "$SCRIPT_DIR/build-bootstrap-package.sh"
 
-log_info ">>> [阶段5/6] 正在构建应用工具集(curl, wget, aria2, nano, vim, vi)..."
+log_info ">>> [阶段5/6] 正在构建应用工具集(curl, wget, aria2, nano, vim, vi, bash, zsh, fish, lm_sensors, fastfetch)..."
 "$SCRIPT_DIR/build-curl.sh"
 "$SCRIPT_DIR/build-wget.sh"
 "$SCRIPT_DIR/build-aria2.sh"
 "$SCRIPT_DIR/build-nano.sh"
 "$SCRIPT_DIR/build-vim.sh"
 "$SCRIPT_DIR/build-vi.sh"
+"$SCRIPT_DIR/build-bash.sh"
+"$SCRIPT_DIR/build-zsh.sh"
+"$SCRIPT_DIR/build-fish.sh"
+"$SCRIPT_DIR/build-lm-sensors.sh"
+"$SCRIPT_DIR/build-fastfetch.sh"
 
 log_info ">>> [阶段6/6] 正在更新软件源数据库索引并校验最终产物..."
 "$SCRIPT_DIR/update-repo.sh"

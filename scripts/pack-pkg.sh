@@ -59,7 +59,7 @@ mapfile -t ELF_DEPS < <(printf '%s' "$ELF_DEPS_RAW" | grep -v '^$')
 if [[ ${#ELF_DEPS[@]} -gt 0 ]]; then
     echo -e "\033[1;34m[*] 由DT_NEEDED推导出的库依赖:${ELF_DEPS[*]}\033[0m"
 else
-    echo -e "\033[1;34m[*] 本包无DT_NEEDED库依赖(纯数据或元包)\033[0m"
+    echo -e "\033[1;34m[*] 本包没有跨包DT_NEEDED依赖(纯数据/元包,或只依赖系统库与自身文件)\033[0m"
 fi
 
 INSTALLED_SIZE=$(du -sb "$STAGING_DIR" | cut -f1)

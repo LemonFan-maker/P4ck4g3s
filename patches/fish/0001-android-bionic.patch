@@ -1,0 +1,52 @@
+diff --git a/src/env/environment.rs b/src/env/environment.rs
+index ac4f5bb..55c88df 100644
+--- a/src/env/environment.rs
++++ b/src/env/environment.rs
+@@ -557,8 +557,24 @@ fn setup_user(global_exported_mode: EnvSetMode, vars: &EnvStack) {
+ }
+ 
+ pub(crate) static FALLBACK_PATH: LazyLock<&[WString]> = LazyLock::new(|| {
++    // Android's bionic does not implement confstr(_CS_PATH); use the
++    // environment's own bin directory and the Android system paths.
++    #[cfg(target_os = "android")]
++    {
++        let paths: Vec<WString> = vec![
++            str2wcstring(PREFIX) + L!("/bin"),
++            L!("/system/bin").to_owned(),
++            L!("/system/xbin").to_owned(),
++            L!("/usr/bin").to_owned(),
++            L!("/bin").to_owned(),
++        ];
++        return Box::leak(paths.into_boxed_slice());
++    }
++
+     // _CS_PATH: colon-separated paths to find POSIX utilities. Same as USER_CS_PATH.
+     // Fix until rust-lang/libc#4956 is merged
++    #[cfg(not(target_os = "android"))]
++    {
+     cfg_if::cfg_if!(
+         if #[cfg(target_os = "illumos")] {
+             // See https://github.com/illumos/illumos-gate/blob/af641d205ecf080be0d900f89c4f3d2adb84f33f/usr/src/uts/common/sys/unistd.h#L50
+@@ -584,6 +600,7 @@ fn setup_user(global_exported_mode: EnvSetMode, vars: &EnvStack) {
+         ]
+     };
+     Box::leak(paths.into_boxed_slice())
++    }
+ });
+ 
+ /// Make sure the PATH variable contains something.
+diff --git a/src/path.rs b/src/path.rs
+index 409e68c..ede3255 100644
+--- a/src/path.rs
++++ b/src/path.rs
+@@ -693,6 +693,10 @@ pub fn path_remoteness(path: &wstr) -> DirRemoteness {
+                             DirRemoteness::Unknown
+                         }
+                     }
++                } else if #[cfg(target_os = "android")] {
++                    // bionic has neither MNT_LOCAL nor a portable remote-fs
++                    // flag; locking conservatively is not worth it here.
++                    DirRemoteness::Unknown
+                 } else if #[cfg(target_os = "netbsd")] {
+                     // NetBSD doesn't have statfs, but MNT_LOCAL works for statvfs.
+                     use std::mem::MaybeUninit;

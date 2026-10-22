@@ -15,6 +15,11 @@ vim,tool,arch,https://github.com/vim/vim.git,v9.2.1178,,,,,vim,9.2.1178,"Vi Impr
 vi,tool,arch,,,,,,,,9.2.1178,Vi文本编辑器接口
 wget,tool,arch,,,wget-1.25.0.tar.gz,https://ftp.gnu.org/gnu/wget/wget-1.25.0.tar.gz,https://mirrors.kernel.org/gnu/wget/wget-1.25.0.tar.gz,766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784,wget,1.25.0,Network utility to retrieve files from the web
 aria2,tool,arch,https://github.com/aria2/aria2.git,release-1.37.0,,,,,aria2,1.37.0,"Download utility that supports HTTP(S), FTP, BitTorrent, and Metalink"
+bash,tool,arch,,,bash-5.3.tar.gz,https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz,,0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba,bash,5.3.20,The GNU Bourne Again shell
+zsh,tool,arch,,,zsh-5.9.2.tar.xz,https://www.zsh.org/pub/zsh-5.9.2.tar.xz,https://sourceforge.net/projects/zsh/files/zsh/5.9.2/zsh-5.9.2.tar.xz/download,36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81,zsh,5.9.2,A very advanced and programmable command interpreter (shell) for UNIX
+fish,tool,arch,https://github.com/fish-shell/fish-shell.git,4.9.3,,,,,fish,4.9.3,Smart and user friendly shell intended mostly for interactive use
+fastfetch,tool,arch,https://github.com/fastfetch-cli/fastfetch.git,2.70.0,,,,,fastfetch,2.70.0,A feature-rich and performance oriented neofetch like system information tool
+lm_sensors,tool,arch,https://github.com/lm-sensors/lm-sensors.git,V3-6-2,,,,,lm_sensors,3.6.2,Collection of user space tools for general SMBus access and hardware monitoring
 ca-certificates,data,pin,,,cacert-2024-09-24.pem,https://curl.se/ca/cacert-2024-09-24.pem,,189d3cf6d103185fba06d76c1af915263c6d42225481a1759e853b33ac857540,ca-certificates,2024.09.24,Common CA certificates - default providers
 base-layout,data,pin,,,,,,,,1.0.0,0vl0ad3r基础文件系统层次结构与环境分流配置
 ndk,toolchain,pin,,,,,,,,r30,Android NDK交叉工具链

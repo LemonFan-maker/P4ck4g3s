@@ -224,6 +224,7 @@ check_pacman_conf_has_no_signature_requirements() {
 apply_patches() {
     local component="$1"
     local target_dir="$2"
+    local strip="${3:-1}"
     local comp_patch_dir="$PATCHES_DIR/$component"
 
     if [[ ! -d "$comp_patch_dir" ]]; then
@@ -244,14 +245,14 @@ apply_patches() {
     for patch_file in "${patches[@]}"; do
         local patch_name
         patch_name="$(basename "$patch_file")"
-        if patch -d "$target_dir" -p1 -N --dry-run --silent < "$patch_file" >/dev/null 2>&1; then
-            patch -d "$target_dir" -p1 < "$patch_file"
+        if patch -d "$target_dir" -p"$strip" -N --dry-run --silent < "$patch_file" >/dev/null 2>&1; then
+            patch -d "$target_dir" -p"$strip" < "$patch_file"
             log_success "已成功应用补丁:${patch_name}"
-        elif patch -d "$target_dir" -p1 -R --dry-run --silent < "$patch_file" >/dev/null 2>&1; then
+        elif patch -d "$target_dir" -p"$strip" -R --dry-run --silent < "$patch_file" >/dev/null 2>&1; then
             log_info "补丁此前已应用,跳过:${patch_name}"
         else
             log_error "应用补丁失败:${patch_name}"
-            patch -d "$target_dir" -p1 < "$patch_file" || exit 1
+            patch -d "$target_dir" -p"$strip" < "$patch_file" || exit 1
         fi
     done
 }

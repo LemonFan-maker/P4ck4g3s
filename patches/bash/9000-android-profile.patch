@@ -1,0 +1,10 @@
+--- pathnames.h.in.orig
++++ pathnames.h.in
+@@ -25,7 +25,7 @@
+ 
+ /* The default login shell startup file. */
+-#define SYS_PROFILE "/etc/profile"
++#define SYS_PROFILE "/system/0vl0ad3r/etc/profile"
+ 
+ /* The default location of the bash debugger initialization/startup file. */
+ #define DEBUGGER_START_FILE	"@DEBUGGER_START_FILE@"
